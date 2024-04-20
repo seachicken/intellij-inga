@@ -5,7 +5,7 @@
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Intellij-inga</name>
+    <name>Inga</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
     <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
@@ -27,4 +27,16 @@
     <extensions defaultExtensionNs="com.intellij">
 
     </extensions>
+    <actions>
+        <action id="inga.intellijinga.actions.StartAnalysisAction" class="inga.intellijinga.actions.StartAnalysisAction"
+                text="Start Inga Analysis"/>
+        <action id="inga.intellijinga.actions.StopAnalysisAction" class="inga.intellijinga.actions.StopAnalysisAction"
+                text="Stop Inga Analysis"/>
+
+        <group id="inga.intellijinga.IngaGroup" text="Inga" popup="true">
+            <reference ref="inga.intellijinga.actions.StartAnalysisAction"/>
+            <reference ref="inga.intellijinga.actions.StopAnalysisAction"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </group>
+    </actions>
 </idea-plugin>
