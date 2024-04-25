@@ -20,6 +20,12 @@ intellij {
     plugins.set(listOf(/* Plugin Dependencies */))
 }
 
+dependencies {
+    implementation("com.github.docker-java:docker-java-core:3.3.6")
+    implementation("com.github.docker-java:docker-java-transport-httpclient5:3.3.6")
+    implementation("org.slf4j:slf4j-api:2.0.13")
+}
+
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
@@ -28,6 +34,10 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
+    }
+
+    buildSearchableOptions {
+        enabled = false
     }
 
     patchPluginXml {
