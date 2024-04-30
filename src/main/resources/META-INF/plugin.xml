@@ -26,8 +26,11 @@
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="IngaViewer" anchor="bottom" factoryClass="inga.intellijinga.IngaViewer"/>
+    </extensions>
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
-        <server id="ingaLanguageServerId"
+        <server id="ingaLanguageServer"
                 name="Inga"
                 factoryClass="inga.intellijinga.IngaLanguageServer">
             <description><![CDATA[
@@ -36,9 +39,9 @@
             </description>
         </server>
         <languageMapping language="JAVA"
-                         serverId="ingaLanguageServerId"/>
+                         serverId="ingaLanguageServer"/>
         <languageMapping language="KOTLIN"
-                         serverId="ingaLanguageServerId"/>
+                         serverId="ingaLanguageServer"/>
     </extensions>
     <actions>
         <action id="inga.intellijinga.actions.StartAnalysisAction" class="inga.intellijinga.actions.StartAnalysisAction"
