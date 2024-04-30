@@ -17,7 +17,12 @@ intellij {
     version.set("2023.1.5")
     type.set("IC") // Target IDE Platform
 
-    plugins.set(listOf(/* Plugin Dependencies */))
+    plugins.set(
+        listOf(
+            "com.redhat.devtools.lsp4ij:0.0.1-20240426-131744@nightly",
+            "com.redhat.devtools.intellij.telemetry:1.1.0.52"
+        )
+    )
 }
 
 dependencies {
@@ -34,6 +39,10 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
+    }
+
+    runIde {
+        systemProperties["com.redhat.devtools.intellij.telemetry.mode"] = "disabled"
     }
 
     buildSearchableOptions {

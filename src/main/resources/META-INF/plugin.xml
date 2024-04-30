@@ -21,11 +21,24 @@
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.redhat.devtools.lsp4ij</depends>
+    <depends>com.redhat.devtools.intellij.telemetry</depends>
 
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
-    <extensions defaultExtensionNs="com.intellij">
-
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="ingaLanguageServerId"
+                name="Inga"
+                factoryClass="inga.intellijinga.IngaLanguageServer">
+            <description><![CDATA[
+    Some description written in HTML to display it in the LSP consoles view and Language Servers settings.
+    ]]>
+            </description>
+        </server>
+        <languageMapping language="JAVA"
+                         serverId="ingaLanguageServerId"/>
+        <languageMapping language="KOTLIN"
+                         serverId="ingaLanguageServerId"/>
     </extensions>
     <actions>
         <action id="inga.intellijinga.actions.StartAnalysisAction" class="inga.intellijinga.actions.StartAnalysisAction"
