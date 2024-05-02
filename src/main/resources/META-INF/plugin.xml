@@ -27,7 +27,15 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <projectService
+                serviceImplementation="inga.intellijinga.IngaSettings"/>
         <toolWindow id="IngaViewer" anchor="bottom" factoryClass="inga.intellijinga.IngaViewer"/>
+        <projectConfigurable
+                parentId="tools"
+                id="inga.intellijinga.IngaConfigurable"
+                instance="inga.intellijinga.IngaConfigurable"
+                displayName="Inga"
+                nonDefaultProject="true"/>
     </extensions>
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="ingaLanguageServer"
