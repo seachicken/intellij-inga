@@ -83,43 +83,51 @@ class IngaService(private val project: Project) {
                         super.onNext(item)
                     }
                 }).awaitCompletion()
-
-            val state = project.service<IngaSettings>().state
-            val command = mutableListOf(
-                "--mode", "server", "--root-path", "/work",
-            )
-            if (state.baseBranch.isNotEmpty()) {
-                command += "--base-commit"
-                command += state.baseBranch
-            }
-            if (state.includePathPattern.isNotEmpty()) {
-                command += "--include"
-                command += state.includePathPattern
-            }
-            if (state.excludePathPattern.isNotEmpty()) {
-                command += "--exclude"
-                command += state.excludePathPattern
-            }
-
-            client
-                .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
-                .withStdinOpen(true)
-                .withPlatform("linux/amd64")
-                .withHostConfig(
-                    HostConfig.newHostConfig()
-                        .withBinds(Bind(project.basePath, Volume("/work")))
-                )
-                .withWorkingDir("/work")
-                .withCmd(command)
-                .exec()
-                .id
+            createIngaContainer()
         } else {
-            ingaContainer.id
+            if (ingaContainer.mounts.any { it.source?.endsWith(project.basePath ?: "") == false }) {
+                client.removeContainerCmd(ingaContainer.id).exec()
+                createIngaContainer()
+            } else {
+                ingaContainer.id
+            }
         }
 
         client.startContainerCmd(containerId).exec()
 
         return containerId
+    }
+
+    private fun createIngaContainer(): String {
+        val state = project.service<IngaSettings>().state
+        val command = mutableListOf(
+            "--mode", "server", "--root-path", "/work",
+        )
+        if (state.baseBranch.isNotEmpty()) {
+            command += "--base-commit"
+            command += state.baseBranch
+        }
+        if (state.includePathPattern.isNotEmpty()) {
+            command += "--include"
+            command += state.includePathPattern
+        }
+        if (state.excludePathPattern.isNotEmpty()) {
+            command += "--exclude"
+            command += state.excludePathPattern
+        }
+
+        return client
+            .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
+            .withStdinOpen(true)
+            .withPlatform("linux/amd64")
+            .withHostConfig(
+                HostConfig.newHostConfig()
+                    .withBinds(Bind(project.basePath, Volume("/work")))
+            )
+            .withWorkingDir("/work")
+            .withCmd(command)
+            .exec()
+            .id
     }
 
     private fun startIngaUiContainer(): String {
