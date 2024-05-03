@@ -5,8 +5,10 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.util.ui.FormBuilder
 import java.awt.BorderLayout
+import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JSeparator
 import javax.swing.JTextField
 
 class IngaConfigurable(private val p: Project) : Configurable {
@@ -23,6 +25,17 @@ class IngaConfigurable(private val p: Project) : Configurable {
                 includePathPatternField.apply { text = state.includePathPattern })
             .addLabeledComponent("Exclude path pattern:",
                 excludePathPatternField.apply { text = state.excludePathPattern })
+            .addComponent(JPanel().apply {
+                border = BorderFactory.createTitledBorder("Binding containers")
+                add(
+                    FormBuilder.createFormBuilder()
+                        .addLabeledComponent("inga container id:",
+                            JTextField(state.ingaContainerId).apply { isEnabled = false })
+                        .addLabeledComponent("inga-ui container id:",
+                            JTextField(state.ingaUiContainerId).apply { isEnabled = false })
+                        .panel
+                )
+            })
             .panel
         return JPanel(BorderLayout()).apply {
             add(panel, BorderLayout.NORTH)

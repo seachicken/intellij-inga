@@ -21,5 +21,7 @@ class IngaSettings : PersistentStateComponent<IngaSettingsState> {
 data class IngaSettingsState(
     var baseBranch: String = "",
     var includePathPattern: String = "",
-    var excludePathPattern: String = ""
+    var excludePathPattern: String = "",
+    var ingaContainerId: String = "",
+    var ingaUiContainerId: String = ""
 )

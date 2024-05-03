@@ -11,16 +11,16 @@ import org.eclipse.lsp4j.services.LanguageServer
 import java.net.URI
 
 class IngaLanguageServer : LanguageServerFactory {
-    override fun createConnectionProvider(p: Project): StreamConnectionProvider {
+    override fun createConnectionProvider(project: Project): StreamConnectionProvider {
         return object : ProcessStreamConnectionProvider() {
             override fun start() {
-                p.service<IngaService>().start()
-                commands = listOf("docker", "attach", p.service<IngaService>().ingaContainerId)
+                project.service<IngaService>().start()
+                commands = listOf("docker", "attach", project.service<IngaSettings>().state.ingaContainerId)
                 super.start()
             }
 
             override fun stop() {
-                p.service<IngaService>().stop()
+                project.service<IngaService>().stop()
                 super.stop()
             }
 

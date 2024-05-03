@@ -2,7 +2,6 @@ package inga.intellijinga
 
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
-import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.command.PullImageResultCallback
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
@@ -24,8 +23,6 @@ class IngaService(private val project: Project) {
         const val INGA_UI_IMAGE_TAG = "0.1.4"
     }
 
-    var ingaContainerId: String = ""
-
     private lateinit var client: DockerClient
 
     fun start() {
@@ -41,10 +38,12 @@ class IngaService(private val project: Project) {
 
         runBlocking {
             launch {
-                ingaContainerId = startIngaContainer()
+                val containerId = project.service<IngaSettings>().state.ingaContainerId
+                project.service<IngaSettings>().state.ingaContainerId = startIngaContainer(containerId)
             }
             launch {
-                startIngaUiContainer()
+                val containerId = project.service<IngaSettings>().state.ingaUiContainerId
+                project.service<IngaSettings>().state.ingaUiContainerId = startIngaUiContainer(containerId)
             }
         }
     }
@@ -57,22 +56,24 @@ class IngaService(private val project: Project) {
 
         runBlocking {
             launch {
-                stopIngaContainer()
+                val containerId = project.service<IngaSettings>().state.ingaContainerId
+                stopContainer(containerId)
             }
             launch {
-                stopIngaUiContainer()
+                val containerId = project.service<IngaSettings>().state.ingaUiContainerId
+                stopContainer(containerId)
             }
         }
     }
 
-    private fun startIngaContainer(): String {
+    private fun startIngaContainer(containerId: String): String {
         val ingaContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.image == "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG" }
+            .find { it.id == containerId }
 
-        val containerId = if (ingaContainer == null) {
+        return if (ingaContainer == null) {
             client
                 .pullImageCmd(INGA_IMAGE_NAME)
                 .withTag(INGA_IMAGE_TAG)
@@ -85,17 +86,13 @@ class IngaService(private val project: Project) {
                 }).awaitCompletion()
             createIngaContainer()
         } else {
-            if (ingaContainer.mounts.any { it.source?.endsWith(project.basePath ?: "") == false }) {
-                client.removeContainerCmd(ingaContainer.id).exec()
-                createIngaContainer()
-            } else {
-                ingaContainer.id
+            ingaContainer.id
+        }.also {
+            if (ingaContainer?.state == "running") {
+                stopContainer(it)
             }
+            client.startContainerCmd(it).exec()
         }
-
-        client.startContainerCmd(containerId).exec()
-
-        return containerId
     }
 
     private fun createIngaContainer(): String {
@@ -118,6 +115,7 @@ class IngaService(private val project: Project) {
 
         return client
             .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
+            .withName("inga_${project.name}")
             .withStdinOpen(true)
             .withPlatform("linux/amd64")
             .withHostConfig(
@@ -130,14 +128,14 @@ class IngaService(private val project: Project) {
             .id
     }
 
-    private fun startIngaUiContainer(): String {
+    private fun startIngaUiContainer(containerId: String): String {
         val ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.image == "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG" }
+            .find { it.id == containerId }
 
-        val containerId = if (ingaUiContainer == null) {
+        return if (ingaUiContainer == null) {
             client
                 .pullImageCmd(INGA_UI_IMAGE_NAME)
                 .withTag(INGA_UI_IMAGE_TAG)
@@ -150,57 +148,34 @@ class IngaService(private val project: Project) {
             val exposedPort = ExposedPort(4173)
             client
                 .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
-                .withStdinOpen(true)
+                .withName("inga-ui_${project.name}")
                 .withHostConfig(
                     HostConfig.newHostConfig()
                         .withBinds(Bind(project.basePath, Volume("/work")))
                         .withPortBindings(PortBinding(Ports.Binding.bindPort(4173), exposedPort))
                 )
-                .withCmd("html-report", "//")
+                .withEntrypoint("bash")
+                .withCmd("-c", "npm run build --ingapath=../work/reports/report.json && npm run preview")
                 .withExposedPorts(exposedPort)
                 .exec()
                 .id
         } else {
             ingaUiContainer.id
-        }
-
-        client.startContainerCmd(containerId).exec()
-        client.execCreateCmd(containerId)
-            .withCmd("bash", "-c", "npm run build --ingapath=../work/reports/report.json && npm run preview")
-            .withAttachStdout(true)
-            .withAttachStderr(true)
-            .exec()
-            .also {
-                client.execStartCmd(it.id)
-                    .exec(object : ResultCallback.Adapter<Frame>() {
-                        override fun onNext(item: Frame?) {
-                            Log.info(item.toString())
-                        }
-                    }).awaitCompletion()
+        }.also {
+            if (ingaUiContainer?.state == "running") {
+                stopContainer(it)
             }
-
-        return containerId
-    }
-
-    private fun stopIngaContainer() {
-        val ingaContainer = client
-            .listContainersCmd()
-            .withShowAll(true)
-            .exec()
-            .find { it.image == "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG" }
-        if (ingaContainer != null) {
-            client.stopContainerCmd(ingaContainer.id).exec()
+            client.startContainerCmd(it).exec()
         }
     }
 
-    private fun stopIngaUiContainer() {
-        val ingaContainer = client
+    private fun stopContainer(containerId: String) {
+        client
             .listContainersCmd()
-            .withShowAll(true)
             .exec()
-            .find { it.image == "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG" }
-        if (ingaContainer != null) {
-            client.stopContainerCmd(ingaContainer.id).exec()
-        }
+            .find { it.id == containerId }
+            .let {
+                client.stopContainerCmd(containerId).exec()
+            }
     }
 }
