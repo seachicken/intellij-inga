@@ -17,10 +17,9 @@ import kotlinx.coroutines.runBlocking
 class IngaService(private val project: Project) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-//        const val IMAGE_TAG = "latest-java"
-        const val INGA_IMAGE_TAG = "0.12.0-pre22-java"
+        const val INGA_IMAGE_TAG = "latest-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.1.4"
+        const val INGA_UI_IMAGE_TAG = "0.1.6"
     }
 
     private lateinit var client: DockerClient
@@ -151,11 +150,11 @@ class IngaService(private val project: Project) {
                 .withName("inga-ui_${project.name}")
                 .withHostConfig(
                     HostConfig.newHostConfig()
-                        .withBinds(Bind(project.basePath, Volume("/work")))
+                        .withBinds(Bind("${project.basePath}/reports", Volume("/inga-ui/inga-report")))
                         .withPortBindings(PortBinding(Ports.Binding.bindPort(4173), exposedPort))
                 )
                 .withEntrypoint("bash")
-                .withCmd("-c", "npm run build --ingapath=../work/reports/report.json && npm run preview")
+                .withCmd("-c", "npm run build && npm run preview")
                 .withExposedPorts(exposedPort)
                 .exec()
                 .id
