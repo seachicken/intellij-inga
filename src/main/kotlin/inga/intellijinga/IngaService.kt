@@ -7,11 +7,14 @@ import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Paths
+import kotlin.io.path.pathString
 
 @Service(Service.Level.PROJECT)
 class IngaService(private val project: Project) {
@@ -22,6 +25,8 @@ class IngaService(private val project: Project) {
         const val INGA_UI_IMAGE_TAG = "latest"
     }
 
+    private val ingaContainerName = "inga_${project.name}"
+    private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "inga", ingaContainerName)
     private lateinit var client: DockerClient
 
     fun start() {
@@ -97,7 +102,7 @@ class IngaService(private val project: Project) {
     private fun createIngaContainer(): String {
         val state = project.service<IngaSettings>().state
         val command = mutableListOf(
-            "--mode", "server", "--root-path", "/work",
+            "--mode", "server", "--root-path", "/work", "--temp-path", "/inga-temp",
         )
         if (state.baseBranch.isNotEmpty()) {
             command += "--base-commit"
@@ -114,12 +119,15 @@ class IngaService(private val project: Project) {
 
         return client
             .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
-            .withName("inga_${project.name}")
+            .withName(ingaContainerName)
             .withStdinOpen(true)
             .withPlatform("linux/amd64")
             .withHostConfig(
                 HostConfig.newHostConfig()
-                    .withBinds(Bind(project.basePath, Volume("/work")))
+                    .withBinds(
+                        Bind(project.basePath, Volume("/work"), AccessMode.ro),
+                        Bind(ingaTempPath.pathString, Volume("/inga-temp"), AccessMode.rw)
+                    )
             )
             .withWorkingDir("/work")
             .withCmd(command)
@@ -150,7 +158,9 @@ class IngaService(private val project: Project) {
                 .withName("inga-ui_${project.name}")
                 .withHostConfig(
                     HostConfig.newHostConfig()
-                        .withBinds(Bind("${project.basePath}/reports", Volume("/inga-ui/inga-report")))
+                        .withBinds(
+                            Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
+                        )
                         .withPortBindings(PortBinding(Ports.Binding.bindPort(4173), exposedPort))
                 )
                 .withEntrypoint("bash")
