@@ -90,7 +90,7 @@ class IngaService(private val project: Project) {
                         super.onNext(item)
                     }
                 }).awaitCompletion()
-            createIngaContainer()
+            createIngaContainer(state)
         } else {
             ingaContainer.id
         }.also {
@@ -101,8 +101,7 @@ class IngaService(private val project: Project) {
         }
     }
 
-    private fun createIngaContainer(): String {
-        val state = project.service<IngaSettings>().state
+    private fun createIngaContainer(state: IngaSettingsState): String {
         val command = mutableListOf(
             "--mode", "server", "--root-path", "/work", "--temp-path", "/inga-temp",
         )
