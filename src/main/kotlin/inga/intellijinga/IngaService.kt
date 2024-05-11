@@ -43,13 +43,12 @@ class IngaService(private val project: Project) {
         runBlocking {
             launch {
                 project.service<IngaSettings>().state.ingaContainerId = startIngaContainer(
-                    project.service<IngaSettings>().state.ingaContainerId
+                    project.service<IngaSettings>().state
                 )
             }
             launch {
                 project.service<IngaSettings>().state.ingaUiContainerId = startIngaUiContainer(
-                    project.service<IngaSettings>().state.ingaUiContainerId,
-                    project.service<IngaSettings>().state.port
+                    project.service<IngaSettings>().state
                 )
             }
         }
@@ -73,12 +72,12 @@ class IngaService(private val project: Project) {
         }
     }
 
-    private fun startIngaContainer(containerId: String): String {
+    private fun startIngaContainer(state: IngaSettingsState): String {
         val ingaContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.id == containerId }
+            .find { it.id == state.ingaContainerId }
 
         return if (ingaContainer == null) {
             client
@@ -138,12 +137,12 @@ class IngaService(private val project: Project) {
             .id
     }
 
-    private fun startIngaUiContainer(containerId: String, port: Int): String {
+    private fun startIngaUiContainer(state: IngaSettingsState): String {
         val ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.id == containerId }
+            .find { it.id == state.ingaUiContainerId }
 
         return if (ingaUiContainer == null) {
             client
@@ -155,7 +154,7 @@ class IngaService(private val project: Project) {
                         super.onNext(item)
                     }
                 }).awaitCompletion()
-            val exposedPort = ExposedPort(port)
+            val exposedPort = ExposedPort(state.port)
             client
                 .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
                 .withName("inga-ui_${project.name}")
@@ -164,10 +163,10 @@ class IngaService(private val project: Project) {
                         .withBinds(
                             Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
                         )
-                        .withPortBindings(PortBinding(Ports.Binding.bindPort(port), exposedPort))
+                        .withPortBindings(PortBinding(Ports.Binding.bindPort(state.port), exposedPort))
                 )
                 .withEntrypoint("bash")
-                .withCmd("-c", "npm run build && npm run preview -- --port $port")
+                .withCmd("-c", "npm run build && npm run preview -- --port ${state.port}")
                 .withExposedPorts(exposedPort)
                 .exec()
                 .id
