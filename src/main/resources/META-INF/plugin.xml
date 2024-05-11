@@ -41,7 +41,7 @@
                 name="Inga"
                 factoryClass="inga.intellijinga.IngaLanguageServer">
             <description><![CDATA[
-    Some description written in HTML to display it in the LSP consoles view and Language Servers settings.
+    A static analysis tool that searches references from changed code to detect entry points that have a strong impact on the user.
     ]]>
             </description>
         </server>
