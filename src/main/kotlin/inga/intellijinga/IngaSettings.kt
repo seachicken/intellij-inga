@@ -22,6 +22,7 @@ data class IngaSettingsState(
     var baseBranch: String = "",
     var includePathPattern: String = "",
     var excludePathPattern: String = "",
+    var port: Int = 4173,
     var ingaContainerId: String = "",
     var ingaUiContainerId: String = ""
 )

@@ -15,6 +15,7 @@ class IngaConfigurable(private val p: Project) : Configurable {
     private val baseBranchField = JTextField()
     private val includePathPatternField = JTextField()
     private val excludePathPatternField = JTextField()
+    private val portField = JTextField()
 
     override fun createComponent(): JComponent {
         val state = p.service<IngaSettings>().state
@@ -25,6 +26,8 @@ class IngaConfigurable(private val p: Project) : Configurable {
                 includePathPatternField.apply { text = state.includePathPattern })
             .addLabeledComponent("Exclude path pattern:",
                 excludePathPatternField.apply { text = state.excludePathPattern })
+            .addLabeledComponent("inga-ui server port:",
+                portField.apply { text = state.port.toString() })
             .addComponent(JPanel().apply {
                 border = BorderFactory.createTitledBorder("Binding containers")
                 add(
@@ -47,6 +50,7 @@ class IngaConfigurable(private val p: Project) : Configurable {
         return state.baseBranch != baseBranchField.text
                 || state.includePathPattern != includePathPatternField.text
                 || state.excludePathPattern != excludePathPatternField.text
+                || state.port != portField.text.toInt()
     }
 
     override fun apply() {
@@ -54,7 +58,8 @@ class IngaConfigurable(private val p: Project) : Configurable {
             IngaSettingsState(
                 baseBranchField.text,
                 includePathPatternField.text,
-                excludePathPatternField.text
+                excludePathPatternField.text,
+                portField.text.toInt()
             )
         )
     }

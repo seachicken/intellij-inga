@@ -42,12 +42,15 @@ class IngaService(private val project: Project) {
 
         runBlocking {
             launch {
-                val containerId = project.service<IngaSettings>().state.ingaContainerId
-                project.service<IngaSettings>().state.ingaContainerId = startIngaContainer(containerId)
+                project.service<IngaSettings>().state.ingaContainerId = startIngaContainer(
+                    project.service<IngaSettings>().state.ingaContainerId
+                )
             }
             launch {
-                val containerId = project.service<IngaSettings>().state.ingaUiContainerId
-                project.service<IngaSettings>().state.ingaUiContainerId = startIngaUiContainer(containerId)
+                project.service<IngaSettings>().state.ingaUiContainerId = startIngaUiContainer(
+                    project.service<IngaSettings>().state.ingaUiContainerId,
+                    project.service<IngaSettings>().state.port
+                )
             }
         }
     }
@@ -135,7 +138,7 @@ class IngaService(private val project: Project) {
             .id
     }
 
-    private fun startIngaUiContainer(containerId: String): String {
+    private fun startIngaUiContainer(containerId: String, port: Int): String {
         val ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
@@ -152,7 +155,7 @@ class IngaService(private val project: Project) {
                         super.onNext(item)
                     }
                 }).awaitCompletion()
-            val exposedPort = ExposedPort(4173)
+            val exposedPort = ExposedPort(port)
             client
                 .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
                 .withName("inga-ui_${project.name}")
@@ -161,10 +164,10 @@ class IngaService(private val project: Project) {
                         .withBinds(
                             Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
                         )
-                        .withPortBindings(PortBinding(Ports.Binding.bindPort(4173), exposedPort))
+                        .withPortBindings(PortBinding(Ports.Binding.bindPort(port), exposedPort))
                 )
                 .withEntrypoint("bash")
-                .withCmd("-c", "npm run build && npm run preview")
+                .withCmd("-c", "npm run build && npm run preview -- --port $port")
                 .withExposedPorts(exposedPort)
                 .exec()
                 .id
