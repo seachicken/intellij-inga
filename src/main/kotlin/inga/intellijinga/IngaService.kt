@@ -26,7 +26,7 @@ class IngaService(private val project: Project) {
     }
 
     private val ingaContainerName = "inga_${project.name}"
-    private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "inga", ingaContainerName)
+    private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "intellij-inga", ingaContainerName)
     private lateinit var client: DockerClient
 
     fun start() {
