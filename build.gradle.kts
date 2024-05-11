@@ -31,6 +31,12 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.13")
 }
 
+configurations {
+    runtimeClasspath {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+}
+
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
