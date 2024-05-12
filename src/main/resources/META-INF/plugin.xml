@@ -29,7 +29,7 @@
         <projectService
                 serviceImplementation="inga.intellijinga.IngaSettings"/>
         <toolWindow
-                id="Inga Service Map"
+                id="Inga Impact Map"
                 icon="AllIcons.Toolwindows.ToolWindowHierarchy"
                 anchor="bottom"
                 factoryClass="inga.intellijinga.IngaViewer"/>
