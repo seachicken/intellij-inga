@@ -20,7 +20,7 @@ class IngaViewer : ToolWindowFactory {
             return
         }
 
-        val port = project.service<IngaSettings>().state.port
+        val port = project.service<IngaSettings>().state.ingaUiUserParameters.port
         val webView = JBCefBrowserBuilder()
             .setUrl("http://localhost:$port/")
             .setEnableOpenDevToolsMenuItem(true)

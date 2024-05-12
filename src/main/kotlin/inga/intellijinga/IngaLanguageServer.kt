@@ -16,12 +16,13 @@ import kotlin.io.path.pathString
 
 class IngaLanguageServer : LanguageServerFactory {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
-        return object : ProcessStreamConnectionProvider(
-            // ProcessBuilder.environment() does not work at release, getting the docker full path
-            listOf(findDocker(), "attach", project.service<IngaSettings>().state.ingaContainerId),
-        ) {
+        return object : ProcessStreamConnectionProvider() {
             override fun start() {
                 project.service<IngaService>().start()
+                commands = listOf(
+                    // ProcessBuilder.environment() does not work at release, getting the docker full path
+                    findDocker(),
+                    "attach", project.service<IngaSettings>().state.ingaContainerId)
                 super.start()
             }
 

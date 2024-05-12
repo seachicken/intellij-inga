@@ -21,13 +21,13 @@ class IngaConfigurable(private val p: Project) : Configurable {
         val state = p.service<IngaSettings>().state
         val panel = FormBuilder.createFormBuilder()
             .addLabeledComponent("Base branch:",
-                baseBranchField.apply { text = state.baseBranch })
+                baseBranchField.apply { text = state.ingaUserParameters.baseBranch })
             .addLabeledComponent("Include path pattern:",
-                includePathPatternField.apply { text = state.includePathPattern })
+                includePathPatternField.apply { text = state.ingaUserParameters.includePathPattern })
             .addLabeledComponent("Exclude path pattern:",
-                excludePathPatternField.apply { text = state.excludePathPattern })
+                excludePathPatternField.apply { text = state.ingaUserParameters.excludePathPattern })
             .addLabeledComponent("inga-ui server port:",
-                portField.apply { text = state.port.toString() })
+                portField.apply { text = state.ingaUiUserParameters.port.toString() })
             .addComponent(JPanel().apply {
                 border = BorderFactory.createTitledBorder("Binding containers")
                 add(
@@ -47,20 +47,24 @@ class IngaConfigurable(private val p: Project) : Configurable {
 
     override fun isModified(): Boolean {
         val state = p.service<IngaSettings>().state
-        return state.baseBranch != baseBranchField.text
-                || state.includePathPattern != includePathPatternField.text
-                || state.excludePathPattern != excludePathPatternField.text
-                || state.port != portField.text.toInt()
+        return state.ingaUserParameters.baseBranch != baseBranchField.text
+                || state.ingaUserParameters.includePathPattern != includePathPatternField.text
+                || state.ingaUserParameters.excludePathPattern != excludePathPatternField.text
+                || state.ingaUiUserParameters.port != portField.text.toInt()
     }
 
     override fun apply() {
         p.service<IngaSettings>().loadState(
-            IngaSettingsState(
-                baseBranchField.text,
-                includePathPatternField.text,
-                excludePathPatternField.text,
-                portField.text.toInt()
-            )
+            p.service<IngaSettings>().state.apply {
+                ingaUserParameters = IngaContainerParameters(
+                    baseBranchField.text,
+                    includePathPatternField.text,
+                    excludePathPatternField.text,
+                )
+                ingaUiUserParameters = IngaUiContainerParameters(
+                    portField.text.toInt()
+                )
+            }
         )
     }
 

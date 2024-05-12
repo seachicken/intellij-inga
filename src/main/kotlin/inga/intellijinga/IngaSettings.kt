@@ -19,10 +19,20 @@ class IngaSettings : PersistentStateComponent<IngaSettingsState> {
 }
 
 data class IngaSettingsState(
-    var baseBranch: String = "",
-    var includePathPattern: String = "",
-    var excludePathPattern: String = "",
-    var port: Int = 4173,
+    var ingaUserParameters: IngaContainerParameters = IngaContainerParameters(),
+    var ingaUiUserParameters: IngaUiContainerParameters = IngaUiContainerParameters(),
+    var ingaContainerParameters: IngaContainerParameters? = null,
+    var ingaUiContainerParameters: IngaUiContainerParameters? = null,
     var ingaContainerId: String = "",
     var ingaUiContainerId: String = ""
+)
+
+data class IngaContainerParameters(
+    var baseBranch: String = "",
+    var includePathPattern: String = "",
+    var excludePathPattern: String = ""
+)
+
+data class IngaUiContainerParameters(
+    var port: Int = 4173
 )

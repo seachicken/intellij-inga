@@ -42,14 +42,12 @@ class IngaService(private val project: Project) {
 
         runBlocking {
             launch {
-                project.service<IngaSettings>().state.ingaContainerId = startIngaContainer(
-                    project.service<IngaSettings>().state
-                )
+                project.service<IngaSettings>().state.ingaContainerId =
+                    startIngaContainer(project.service<IngaSettings>().state)
             }
             launch {
-                project.service<IngaSettings>().state.ingaUiContainerId = startIngaUiContainer(
-                    project.service<IngaSettings>().state
-                )
+                project.service<IngaSettings>().state.ingaUiContainerId =
+                    startIngaUiContainer(project.service<IngaSettings>().state)
             }
         }
     }
@@ -73,11 +71,21 @@ class IngaService(private val project: Project) {
     }
 
     private fun startIngaContainer(state: IngaSettingsState): String {
-        val ingaContainer = client
+        var ingaContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
             .find { it.id == state.ingaContainerId }
+
+        if (ingaContainer != null && state.ingaContainerParameters != state.ingaUserParameters) {
+            if (ingaContainer.state == "running") {
+                stopContainer(ingaContainer.id)
+            }
+            client
+                .removeContainerCmd(ingaContainer.id)
+                .exec()
+            ingaContainer = null
+        }
 
         return if (ingaContainer == null) {
             client
@@ -105,17 +113,17 @@ class IngaService(private val project: Project) {
         val command = mutableListOf(
             "--mode", "server", "--root-path", "/work", "--temp-path", "/inga-temp",
         )
-        if (state.baseBranch.isNotEmpty()) {
+        if (state.ingaUserParameters.baseBranch.isNotEmpty()) {
             command += "--base-commit"
-            command += state.baseBranch
+            command += state.ingaUserParameters.baseBranch
         }
-        if (state.includePathPattern.isNotEmpty()) {
+        if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
-            command += state.includePathPattern
+            command += state.ingaUserParameters.includePathPattern
         }
-        if (state.excludePathPattern.isNotEmpty()) {
+        if (state.ingaUserParameters.excludePathPattern.isNotEmpty()) {
             command += "--exclude"
-            command += state.excludePathPattern
+            command += state.ingaUserParameters.excludePathPattern
         }
 
         return client
@@ -133,15 +141,31 @@ class IngaService(private val project: Project) {
             .withWorkingDir("/work")
             .withCmd(command)
             .exec()
-            .id
+            .id.also {
+                state.ingaContainerParameters = IngaContainerParameters(
+                    state.ingaUserParameters.baseBranch,
+                    state.ingaUserParameters.includePathPattern,
+                    state.ingaUserParameters.excludePathPattern
+                )
+            }
     }
 
     private fun startIngaUiContainer(state: IngaSettingsState): String {
-        val ingaUiContainer = client
+        var ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
             .find { it.id == state.ingaUiContainerId }
+
+        if (ingaUiContainer != null && state.ingaUiContainerParameters != state.ingaUiUserParameters) {
+            if (ingaUiContainer.state == "running") {
+                stopContainer(ingaUiContainer.id)
+            }
+            client
+                .removeContainerCmd(ingaUiContainer.id)
+                .exec()
+            ingaUiContainer = null
+        }
 
         return if (ingaUiContainer == null) {
             client
@@ -153,7 +177,7 @@ class IngaService(private val project: Project) {
                         super.onNext(item)
                     }
                 }).awaitCompletion()
-            val exposedPort = ExposedPort(state.port)
+            val exposedPort = ExposedPort(state.ingaUiUserParameters.port)
             client
                 .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
                 .withName("inga-ui_${project.name}")
@@ -162,13 +186,17 @@ class IngaService(private val project: Project) {
                         .withBinds(
                             Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
                         )
-                        .withPortBindings(PortBinding(Ports.Binding.bindPort(state.port), exposedPort))
+                        .withPortBindings(PortBinding(Ports.Binding.bindPort(state.ingaUiUserParameters.port), exposedPort))
                 )
                 .withEntrypoint("bash")
-                .withCmd("-c", "npm run build && npm run preview -- --port ${state.port}")
+                .withCmd("-c", "npm run build && npm run preview -- --port ${state.ingaUiUserParameters.port}")
                 .withExposedPorts(exposedPort)
                 .exec()
-                .id
+                .id.also {
+                    state.ingaUiContainerParameters = IngaUiContainerParameters(
+                        state.ingaUiUserParameters.port
+                    )
+                }
         } else {
             ingaUiContainer.id
         }.also {
