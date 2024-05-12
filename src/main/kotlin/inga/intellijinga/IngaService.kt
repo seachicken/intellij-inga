@@ -29,7 +29,7 @@ class IngaService(private val project: Project) {
     private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "intellij-inga", ingaContainerName)
     private lateinit var client: DockerClient
 
-    fun start() {
+    fun start(): String {
         Log.info("starting Inga analysis...")
         if (!::client.isInitialized) {
             val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -40,14 +40,13 @@ class IngaService(private val project: Project) {
             client = DockerClientImpl.getInstance(config, httpClient)
         }
 
-        runBlocking {
-            launch {
-                project.service<IngaSettings>().state.ingaContainerId =
-                    startIngaContainer(project.service<IngaSettings>().state)
-            }
+        return runBlocking {
             launch {
                 project.service<IngaSettings>().state.ingaUiContainerId =
                     startIngaUiContainer(project.service<IngaSettings>().state)
+            }
+            startIngaContainer(project.service<IngaSettings>().state).also {
+                project.service<IngaSettings>().state.ingaContainerId = it
             }
         }
     }
