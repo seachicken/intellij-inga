@@ -14,7 +14,11 @@
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    A static analysis tool that searches references from changed code to detect entry points that have a strong impact on the user.
+        <p>Visualize the entry points affected by your code changes. <a href="https://github.com/seachicken/inga">Inga</a> server and <a href="https://github.com/redhat-developer/lsp4ij">LSP4IJ</a> running on the local container communicate and analyze code in real-time.</p>
+        <h2>Requirements</h2>
+        <ul>
+            <li>Docker CLI</li>
+        </ul>
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -45,7 +49,7 @@
                 name="Inga"
                 factoryClass="inga.intellijinga.IngaLanguageServer">
             <description><![CDATA[
-    A static analysis tool that searches references from changed code to detect entry points that have a strong impact on the user.
+                <p>Visualize the entry points affected by your code changes.</p>
     ]]>
             </description>
         </server>
