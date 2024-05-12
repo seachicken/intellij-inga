@@ -15,6 +15,11 @@
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
         <p>Visualize the entry points affected by your code changes. <a href="https://github.com/seachicken/inga">Inga</a> server and <a href="https://github.com/redhat-developer/lsp4ij">LSP4IJ</a> running on the local container communicate and analyze code in real-time.</p>
+        <h2>Supported Languages</h2>
+        <ul>
+            <li>Java</li>
+            <li>Kotlin</li>
+        </ul>
         <h2>Requirements</h2>
         <ul>
             <li>Docker CLI</li>
