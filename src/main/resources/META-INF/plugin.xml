@@ -28,7 +28,11 @@
     <extensions defaultExtensionNs="com.intellij">
         <projectService
                 serviceImplementation="inga.intellijinga.IngaSettings"/>
-        <toolWindow id="IngaViewer" anchor="bottom" factoryClass="inga.intellijinga.IngaViewer"/>
+        <toolWindow
+                id="Inga Service Map"
+                icon="AllIcons.Toolwindows.ToolWindowHierarchy"
+                anchor="bottom"
+                factoryClass="inga.intellijinga.IngaViewer"/>
         <projectConfigurable
                 parentId="tools"
                 id="inga.intellijinga.IngaConfigurable"
