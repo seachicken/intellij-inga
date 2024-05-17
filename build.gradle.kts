@@ -19,8 +19,7 @@ intellij {
 
     plugins.set(
         listOf(
-            "com.redhat.devtools.lsp4ij:0.0.1-20240426-131744@nightly",
-            "com.redhat.devtools.intellij.telemetry:1.1.0.52"
+            "com.redhat.devtools.lsp4ij:0.0.1-20240517-012838@nightly",
         )
     )
 }
@@ -45,10 +44,6 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
-    }
-
-    runIde {
-        systemProperties["com.redhat.devtools.intellij.telemetry.mode"] = "disabled"
     }
 
     buildSearchableOptions {
