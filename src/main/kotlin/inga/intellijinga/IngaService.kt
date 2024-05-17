@@ -125,27 +125,25 @@ class IngaService(private val project: Project) {
             command += state.ingaUserParameters.excludePathPattern
         }
 
+        val binds = mutableListOf(
+            Bind(project.basePath, Volume("/work"), AccessMode.ro),
+            Bind(ingaTempPath.pathString, Volume("/inga-temp"), AccessMode.rw)
+        )
+        for ((src, dst) in state.ingaUserParameters.additionalMounts) {
+            binds.add(Bind(src, Volume(dst), AccessMode.ro))
+        }
+
         return client
             .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
             .withName(ingaContainerName)
             .withStdinOpen(true)
             .withPlatform("linux/amd64")
-            .withHostConfig(
-                HostConfig.newHostConfig()
-                    .withBinds(
-                        Bind(project.basePath, Volume("/work"), AccessMode.ro),
-                        Bind(ingaTempPath.pathString, Volume("/inga-temp"), AccessMode.rw)
-                    )
-            )
+            .withHostConfig(HostConfig.newHostConfig().withBinds(binds))
             .withWorkingDir("/work")
             .withCmd(command)
             .exec()
             .id.also {
-                state.ingaContainerParameters = IngaContainerParameters(
-                    state.ingaUserParameters.baseBranch,
-                    state.ingaUserParameters.includePathPattern,
-                    state.ingaUserParameters.excludePathPattern
-                )
+                state.ingaContainerParameters = state.ingaUserParameters
             }
     }
 
@@ -192,9 +190,7 @@ class IngaService(private val project: Project) {
                 .withExposedPorts(exposedPort)
                 .exec()
                 .id.also {
-                    state.ingaUiContainerParameters = IngaUiContainerParameters(
-                        state.ingaUiUserParameters.port
-                    )
+                    state.ingaUiContainerParameters = state.ingaUiUserParameters
                 }
         } else {
             ingaUiContainer.id

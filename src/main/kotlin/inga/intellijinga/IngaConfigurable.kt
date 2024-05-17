@@ -3,53 +3,88 @@ package inga.intellijinga
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
-import com.intellij.util.ui.FormBuilder
-import java.awt.BorderLayout
-import javax.swing.BorderFactory
+import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.bindIntText
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.table.JBTable
 import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JSeparator
 import javax.swing.JTextField
+import javax.swing.table.DefaultTableModel
 
 class IngaConfigurable(private val p: Project) : Configurable {
     private val baseBranchField = JTextField()
     private val includePathPatternField = JTextField()
     private val excludePathPatternField = JTextField()
     private val portField = JTextField()
+    private val bindMounts = DefaultTableModel()
 
     override fun createComponent(): JComponent {
         val state = p.service<IngaSettings>().state
-        val panel = FormBuilder.createFormBuilder()
-            .addLabeledComponent("Base branch:",
-                baseBranchField.apply { text = state.ingaUserParameters.baseBranch })
-            .addLabeledComponent("Include path pattern:",
-                includePathPatternField.apply { text = state.ingaUserParameters.includePathPattern })
-            .addLabeledComponent("Exclude path pattern:",
-                excludePathPatternField.apply { text = state.ingaUserParameters.excludePathPattern })
-            .addLabeledComponent("inga-ui server port:",
-                portField.apply { text = state.ingaUiUserParameters.port.toString() })
-            .addComponent(JPanel().apply {
-                border = BorderFactory.createTitledBorder("Binding containers")
-                add(
-                    FormBuilder.createFormBuilder()
-                        .addLabeledComponent("inga container id:",
-                            JTextField(state.ingaContainerId).apply { isEnabled = false })
-                        .addLabeledComponent("inga-ui container id:",
-                            JTextField(state.ingaUiContainerId).apply { isEnabled = false })
-                        .panel
-                )
-            })
-            .panel
-        return JPanel(BorderLayout()).apply {
-            add(panel, BorderLayout.NORTH)
+        bindMounts.apply {
+            addColumn("Source")
+            addColumn("Destination")
+            for (mount in state.ingaUserParameters.additionalMounts.entries) {
+                addRow(arrayOf(mount.key, mount.value))
+            }
         }
+        return panel {
+            row("Base branch:") {
+                cell(baseBranchField).bindText(state.ingaUserParameters::baseBranch)
+            }
+            row("Include path pattern:") {
+                cell(includePathPatternField).bindText(state.ingaUserParameters::includePathPattern)
+            }
+            row("Exclude path pattern:") {
+                cell(excludePathPatternField).bindText(state.ingaUserParameters::excludePathPattern)
+                    .comment("Filenames of glob pattern matching to exclude from analysis. (e.g., \"src/test/**\")")
+            }
+            group("Additional mounts") {
+                row {
+                    cell(mountsTable(bindMounts)).align(AlignX.FILL)
+                }
+            }
+            row("Server port:") {
+                cell(portField).bindIntText(state.ingaUiUserParameters::port)
+            }
+            group("Binding containers") {
+                row("inga container id:") {
+                    textField().bindText(state::ingaContainerId).align(AlignX.FILL).enabled(false)
+                }
+                row("inga-ui container id:") {
+                    textField().bindText(state::ingaUiContainerId).align(AlignX.FILL).enabled(false)
+                }
+            }
+        }
+    }
+
+    private fun mountsTable(tableModel : DefaultTableModel) : JComponent {
+        val table = JBTable(tableModel)
+        return ToolbarDecorator.createDecorator(table).apply {
+            setAddAction {
+                tableModel.addRow(arrayOf("", ""))
+                tableModel.fireTableDataChanged()
+            }
+            setRemoveAction {
+                tableModel.removeRow(table.selectedRow)
+                tableModel.fireTableDataChanged()
+            }
+        }.createPanel()
     }
 
     override fun isModified(): Boolean {
         val state = p.service<IngaSettings>().state
+        val hasChangedMounts =
+            state.ingaUserParameters.additionalMounts.entries.size != bindMounts.dataVector.size
+                    || state.ingaUserParameters.additionalMounts.entries
+                .filterIndexed { i, m ->
+                    m.key == bindMounts.dataVector[i][0] && m.value == bindMounts.dataVector[i][1]
+                }.size != state.ingaUserParameters.additionalMounts.size
         return state.ingaUserParameters.baseBranch != baseBranchField.text
                 || state.ingaUserParameters.includePathPattern != includePathPatternField.text
                 || state.ingaUserParameters.excludePathPattern != excludePathPatternField.text
+                || hasChangedMounts
                 || state.ingaUiUserParameters.port != portField.text.toInt()
     }
 
@@ -60,6 +95,7 @@ class IngaConfigurable(private val p: Project) : Configurable {
                     baseBranchField.text,
                     includePathPatternField.text,
                     excludePathPatternField.text,
+                    bindMounts.dataVector.associate { it[0] as String to it[1] as String }.toMutableMap()
                 )
                 ingaUiUserParameters = IngaUiContainerParameters(
                     portField.text.toInt()

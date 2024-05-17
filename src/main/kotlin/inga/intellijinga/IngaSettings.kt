@@ -1,10 +1,11 @@
 package inga.intellijinga
 
 import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import com.intellij.openapi.project.Project
 
+@Service
 @State(name = "inga-project", storages = [Storage("inga-project.xml")])
 class IngaSettings : PersistentStateComponent<IngaSettingsState> {
     private var settings = IngaSettingsState()
@@ -30,7 +31,8 @@ data class IngaSettingsState(
 data class IngaContainerParameters(
     var baseBranch: String = "",
     var includePathPattern: String = "",
-    var excludePathPattern: String = ""
+    var excludePathPattern: String = "",
+    var additionalMounts: MutableMap<String, String> = mutableMapOf()
 )
 
 data class IngaUiContainerParameters(
