@@ -29,7 +29,7 @@ data class IngaSettingsState(
 )
 
 data class IngaContainerParameters(
-    var baseBranch: String = "",
+    var baseBranch: String = "main",
     var includePathPattern: String = "",
     var excludePathPattern: String = "",
     var additionalMounts: MutableMap<String, String> = mutableMapOf()
