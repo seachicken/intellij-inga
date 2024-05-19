@@ -41,7 +41,7 @@ jobs:
         ./gradlew publishPlugin -PpluginVersion=$VERSION -Pchannel=default
     - name: Upload to GitHub Releases
       if: "!contains(github.ref_name, 'SNAPSHOT')"
-      run: gh release create --title ${{ github.ref_name }} --generate-notes ${{ github.ref_name }} ./build/distributions/*
+      run: gh release create --title ${{ github.ref_name }} --generate-notes ${{ github.ref_name }} ./build/distributions/intellij-inga-$VERSION.zip
 
     - name: Publish Plugin to JetBrains Marketplace for BETA
       if: "contains(github.ref_name, 'SNAPSHOT')"
@@ -51,4 +51,4 @@ jobs:
         ./gradlew publishPlugin -PpluginVersion=$VERSION -Pchannel=beta
     - name: Upload to GitHub Releases for BETA
       if: "contains(github.ref_name, 'SNAPSHOT')"
-      run: gh release create --title ${{ github.ref_name }} --generate-notes --draft ${{ github.ref_name }} ./build/distributions/*
+      run: gh release create --title ${{ github.ref_name }} --generate-notes --draft ${{ github.ref_name }} ./build/distributions/intellij-inga-$VERSION.zip
