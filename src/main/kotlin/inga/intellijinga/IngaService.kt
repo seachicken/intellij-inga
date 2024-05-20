@@ -26,6 +26,7 @@ class IngaService(private val project: Project) {
     }
 
     private val ingaContainerName = "inga_${project.name}"
+    private val ingaUiContainerName = "inga-ui_${project.name}"
     private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "intellij-inga", ingaContainerName)
     private lateinit var client: DockerClient
 
@@ -74,7 +75,7 @@ class IngaService(private val project: Project) {
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.id == state.ingaContainerId }
+            .find { it.names[0].substringAfter("/") == ingaContainerName }
 
         if (ingaContainer != null && state.ingaContainerParameters != state.ingaUserParameters) {
             if (ingaContainer.state == "running") {
@@ -152,7 +153,7 @@ class IngaService(private val project: Project) {
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.id == state.ingaUiContainerId }
+            .find { it.names[0].substringAfter("/") == ingaUiContainerName }
 
         if (ingaUiContainer != null && state.ingaUiContainerParameters != state.ingaUiUserParameters) {
             if (ingaUiContainer.state == "running") {
@@ -177,7 +178,7 @@ class IngaService(private val project: Project) {
             val exposedPort = ExposedPort(state.ingaUiUserParameters.port)
             client
                 .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
-                .withName("inga-ui_${project.name}")
+                .withName(ingaUiContainerName)
                 .withHostConfig(
                     HostConfig.newHostConfig()
                         .withBinds(
