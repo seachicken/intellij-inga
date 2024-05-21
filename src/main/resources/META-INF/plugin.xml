@@ -57,9 +57,7 @@
     ]]>
             </description>
         </server>
-        <languageMapping language="JAVA"
-                         serverId="ingaLanguageServer"/>
-        <languageMapping language="KOTLIN"
-                         serverId="ingaLanguageServer"/>
+        <fileNamePatternMapping patterns="*.java;*.kt"
+                                serverId="ingaLanguageServer"/>
     </extensions>
 </idea-plugin>
