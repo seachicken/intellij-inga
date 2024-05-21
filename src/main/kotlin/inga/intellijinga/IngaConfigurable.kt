@@ -48,14 +48,6 @@ class IngaConfigurable(private val p: Project) : Configurable {
             row("Server port:") {
                 cell(portField).bindIntText(state.ingaUiUserParameters::port)
             }
-            group("Binding containers") {
-                row("inga container id:") {
-                    textField().bindText(state::ingaContainerId).align(AlignX.FILL).enabled(false)
-                }
-                row("inga-ui container id:") {
-                    textField().bindText(state::ingaUiContainerId).align(AlignX.FILL).enabled(false)
-                }
-            }
         }
     }
 

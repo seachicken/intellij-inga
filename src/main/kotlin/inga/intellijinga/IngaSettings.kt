@@ -24,8 +24,6 @@ data class IngaSettingsState(
     var ingaUiUserParameters: IngaUiContainerParameters = IngaUiContainerParameters(),
     var ingaContainerParameters: IngaContainerParameters? = null,
     var ingaUiContainerParameters: IngaUiContainerParameters? = null,
-    var ingaContainerId: String = "",
-    var ingaUiContainerId: String = ""
 )
 
 data class IngaContainerParameters(

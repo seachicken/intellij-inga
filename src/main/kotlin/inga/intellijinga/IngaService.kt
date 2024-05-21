@@ -43,12 +43,9 @@ class IngaService(private val project: Project) {
 
         return runBlocking {
             launch {
-                project.service<IngaSettings>().state.ingaUiContainerId =
-                    startIngaUiContainer(project.service<IngaSettings>().state)
+                startIngaUiContainer(project.service<IngaSettings>().state)
             }
-            startIngaContainer(project.service<IngaSettings>().state).also {
-                project.service<IngaSettings>().state.ingaContainerId = it
-            }
+            startIngaContainer(project.service<IngaSettings>().state)
         }
     }
 
@@ -60,12 +57,10 @@ class IngaService(private val project: Project) {
 
         runBlocking {
             launch {
-                val containerId = project.service<IngaSettings>().state.ingaContainerId
-                stopContainer(containerId)
+                stopContainer(ingaContainerName)
             }
             launch {
-                val containerId = project.service<IngaSettings>().state.ingaUiContainerId
-                stopContainer(containerId)
+                stopContainer(ingaUiContainerName)
             }
         }
     }
@@ -79,7 +74,7 @@ class IngaService(private val project: Project) {
 
         if (ingaContainer != null && state.ingaContainerParameters != state.ingaUserParameters) {
             if (ingaContainer.state == "running") {
-                stopContainer(ingaContainer.id)
+                stopContainer(ingaUiContainerName)
             }
             client
                 .removeContainerCmd(ingaContainer.id)
@@ -103,7 +98,7 @@ class IngaService(private val project: Project) {
             ingaContainer.id
         }.also {
             if (ingaContainer?.state == "running") {
-                stopContainer(it)
+                stopContainer(ingaUiContainerName)
             }
             client.startContainerCmd(it).exec()
         }
@@ -203,13 +198,13 @@ class IngaService(private val project: Project) {
         }
     }
 
-    private fun stopContainer(containerId: String) {
+    private fun stopContainer(containerName: String) {
         client
             .listContainersCmd()
             .exec()
-            .find { it.id == containerId }
-            .let {
-                client.stopContainerCmd(containerId).exec()
+            .find { it.names[0].substringAfter("/") == containerName }
+            ?.let {
+                client.stopContainerCmd(it.id).exec()
             }
     }
 }
