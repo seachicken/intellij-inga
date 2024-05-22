@@ -74,7 +74,7 @@ class IngaService(private val project: Project) {
 
         if (ingaContainer != null && state.ingaContainerParameters != state.ingaUserParameters) {
             if (ingaContainer.state == "running") {
-                stopContainer(ingaUiContainerName)
+                stopContainer(ingaContainerName)
             }
             client
                 .removeContainerCmd(ingaContainer.id)
@@ -98,7 +98,7 @@ class IngaService(private val project: Project) {
             ingaContainer.id
         }.also {
             if (ingaContainer?.state == "running") {
-                stopContainer(ingaUiContainerName)
+                stopContainer(ingaContainerName)
             }
             client.startContainerCmd(it).exec()
         }
