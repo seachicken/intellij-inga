@@ -12,7 +12,8 @@ A clear and concise description of what the bug is.
 
 **Your Environment**
 - OS: 
-- Version: 
+- Docker: [e.g. Docker Desktop, Rancher Desktop] 
+- Plugin Version: 
 
 **To Reproduce**
 Steps to reproduce the behavior:
