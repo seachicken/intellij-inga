@@ -13,7 +13,7 @@ import javax.swing.JComponent
 import javax.swing.JTextField
 import javax.swing.table.DefaultTableModel
 
-class IngaConfigurable(private val p: Project) : Configurable {
+class IngaConfigurable(private val project: Project) : Configurable {
     private val baseBranchField = JTextField()
     private val includePathPatternField = JTextField()
     private val excludePathPatternField = JTextField()
@@ -21,7 +21,7 @@ class IngaConfigurable(private val p: Project) : Configurable {
     private val bindMounts = DefaultTableModel()
 
     override fun createComponent(): JComponent {
-        val state = p.service<IngaSettings>().state
+        val state = project.service<IngaSettings>().state
         bindMounts.apply {
             addColumn("Source")
             addColumn("Destination")
@@ -66,7 +66,7 @@ class IngaConfigurable(private val p: Project) : Configurable {
     }
 
     override fun isModified(): Boolean {
-        val state = p.service<IngaSettings>().state
+        val state = project.service<IngaSettings>().state
         val hasChangedMounts =
             state.ingaUserParameters.additionalMounts.entries.size != bindMounts.dataVector.size
                     || state.ingaUserParameters.additionalMounts.entries
@@ -81,8 +81,8 @@ class IngaConfigurable(private val p: Project) : Configurable {
     }
 
     override fun apply() {
-        p.service<IngaSettings>().loadState(
-            p.service<IngaSettings>().state.apply {
+        project.service<IngaSettings>().loadState(
+            project.service<IngaSettings>().state.apply {
                 ingaUserParameters = IngaContainerParameters(
                     baseBranchField.text,
                     includePathPatternField.text,
