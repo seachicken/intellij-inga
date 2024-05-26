@@ -20,9 +20,9 @@ import kotlin.io.path.pathString
 class IngaService(private val project: Project) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "latest-java"
+        const val INGA_IMAGE_TAG = "0.13.11-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "latest"
+        const val INGA_UI_IMAGE_TAG = "0.1.14"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -72,13 +72,19 @@ class IngaService(private val project: Project) {
             .exec()
             .find { it.names[0].substringAfter("/") == ingaContainerName }
 
-        if (ingaContainer != null && state.ingaContainerParameters != state.ingaUserParameters) {
+        if (ingaContainer != null
+            && (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
+                    || state.ingaContainerParameters != state.ingaUserParameters)
+        ) {
             if (ingaContainer.state == "running") {
                 stopContainer(ingaContainerName)
             }
-            client
-                .removeContainerCmd(ingaContainer.id)
-                .exec()
+            client.removeContainerCmd(ingaContainer.id).exec()
+
+            if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG") {
+                client.removeImageCmd(ingaContainer.image).exec()
+            }
+
             ingaContainer = null
         }
 
@@ -150,13 +156,19 @@ class IngaService(private val project: Project) {
             .exec()
             .find { it.names[0].substringAfter("/") == ingaUiContainerName }
 
-        if (ingaUiContainer != null && state.ingaUiContainerParameters != state.ingaUiUserParameters) {
+        if (ingaUiContainer != null
+            && (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
+                    || state.ingaUiContainerParameters != state.ingaUiUserParameters)
+        ) {
             if (ingaUiContainer.state == "running") {
                 stopContainer(ingaUiContainer.id)
             }
-            client
-                .removeContainerCmd(ingaUiContainer.id)
-                .exec()
+            client.removeContainerCmd(ingaUiContainer.id).exec()
+
+            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
+                client.removeImageCmd(ingaUiContainer.image).exec()
+            }
+
             ingaUiContainer = null
         }
 
