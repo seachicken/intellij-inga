@@ -3,6 +3,7 @@ package inga.intellijinga
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.exception.NotModifiedException
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
@@ -31,7 +32,7 @@ class IngaService(private val project: Project) {
     private lateinit var client: DockerClient
 
     fun start(): String {
-        Log.info("starting Inga analysis...")
+        Log.info("INGA starting Inga analysis...")
         if (!::client.isInitialized) {
             val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
                 .build()
@@ -50,7 +51,7 @@ class IngaService(private val project: Project) {
     }
 
     fun stop() {
-        Log.info("stop Inga analysis")
+        Log.info("INGA stop Inga analysis")
         if (!::client.isInitialized) {
             throw IllegalStateException("Inga analysis is not running")
         }
@@ -72,20 +73,22 @@ class IngaService(private val project: Project) {
             .exec()
             .find { it.names[0].substringAfter("/") == ingaContainerName }
 
-        if (ingaContainer != null
-            && (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
-                    || state.ingaContainerParameters != state.ingaUserParameters)
-        ) {
+        if (ingaContainer != null) {
             if (ingaContainer.state == "running") {
                 stopContainer(ingaContainerName)
             }
-            client.removeContainerCmd(ingaContainer.id).exec()
 
-            if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG") {
-                client.removeImageCmd(ingaContainer.image).exec()
+            if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
+                || state.ingaContainerParameters != state.ingaUserParameters
+            ) {
+                client.removeContainerCmd(ingaContainer.id).exec()
+
+                if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG") {
+                    client.removeImageCmd(ingaContainer.image).exec()
+                }
+
+                ingaContainer = null
             }
-
-            ingaContainer = null
         }
 
         return if (ingaContainer == null) {
@@ -95,7 +98,7 @@ class IngaService(private val project: Project) {
                 .withPlatform("linux/amd64")
                 .exec(object : PullImageResultCallback() {
                     override fun onNext(item: PullResponseItem?) {
-                        Log.info(item?.status)
+                        Log.info("INGA ${item?.status}")
                         super.onNext(item)
                     }
                 }).awaitCompletion()
@@ -103,9 +106,6 @@ class IngaService(private val project: Project) {
         } else {
             ingaContainer.id
         }.also {
-            if (ingaContainer?.state == "running") {
-                stopContainer(ingaContainerName)
-            }
             client.startContainerCmd(it).exec()
         }
     }
@@ -156,20 +156,22 @@ class IngaService(private val project: Project) {
             .exec()
             .find { it.names[0].substringAfter("/") == ingaUiContainerName }
 
-        if (ingaUiContainer != null
-            && (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
-                    || state.ingaUiContainerParameters != state.ingaUiUserParameters)
-        ) {
+        if (ingaUiContainer != null) {
             if (ingaUiContainer.state == "running") {
-                stopContainer(ingaUiContainer.id)
-            }
-            client.removeContainerCmd(ingaUiContainer.id).exec()
-
-            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
-                client.removeImageCmd(ingaUiContainer.image).exec()
+                stopContainer(ingaUiContainerName)
             }
 
-            ingaUiContainer = null
+            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
+                || state.ingaUiContainerParameters != state.ingaUiUserParameters
+            ) {
+                client.removeContainerCmd(ingaUiContainer.id).exec()
+
+                if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
+                    client.removeImageCmd(ingaUiContainer.image).exec()
+                }
+
+                ingaUiContainer = null
+            }
         }
 
         return if (ingaUiContainer == null) {
@@ -178,7 +180,7 @@ class IngaService(private val project: Project) {
                 .withTag(INGA_UI_IMAGE_TAG)
                 .exec(object : PullImageResultCallback() {
                     override fun onNext(item: PullResponseItem?) {
-                        Log.info(item?.status)
+                        Log.info("INGA-UI ${item?.status}")
                         super.onNext(item)
                     }
                 }).awaitCompletion()
@@ -203,9 +205,6 @@ class IngaService(private val project: Project) {
         } else {
             ingaUiContainer.id
         }.also {
-            if (ingaUiContainer?.state == "running") {
-                stopContainer(it)
-            }
             client.startContainerCmd(it).exec()
         }
     }

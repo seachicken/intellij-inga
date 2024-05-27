@@ -32,7 +32,7 @@ class IngaLanguageServer : LanguageServerFactory {
             }
 
             override fun handleMessage(message: Message?, languageServer: LanguageServer?, rootUri: URI?) {
-                Log.info("handle message: $message, rootUri: $rootUri")
+                Log.info("INGA handle message: $message, rootUri: $rootUri")
             }
         }
     }
