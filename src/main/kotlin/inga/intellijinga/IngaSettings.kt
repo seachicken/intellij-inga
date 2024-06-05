@@ -8,6 +8,8 @@ import com.intellij.openapi.components.Storage
 @Service
 @State(name = "inga-project", storages = [Storage("inga-project.xml")])
 class IngaSettings : PersistentStateComponent<IngaSettingsState> {
+    var serverPort: Int? = null
+
     private var settings = IngaSettingsState()
 
     override fun getState(): IngaSettingsState {
@@ -21,9 +23,7 @@ class IngaSettings : PersistentStateComponent<IngaSettingsState> {
 
 data class IngaSettingsState(
     var ingaUserParameters: IngaContainerParameters = IngaContainerParameters(),
-    var ingaUiUserParameters: IngaUiContainerParameters = IngaUiContainerParameters(),
-    var ingaContainerParameters: IngaContainerParameters? = null,
-    var ingaUiContainerParameters: IngaUiContainerParameters? = null,
+    var ingaContainerParameters: IngaContainerParameters? = null
 )
 
 data class IngaContainerParameters(
@@ -31,8 +31,4 @@ data class IngaContainerParameters(
     var includePathPattern: String = "",
     var excludePathPattern: String = "",
     var additionalMounts: MutableMap<String, String> = mutableMapOf()
-)
-
-data class IngaUiContainerParameters(
-    var port: Int = 4173
 )

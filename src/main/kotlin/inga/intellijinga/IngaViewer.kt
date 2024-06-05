@@ -6,7 +6,10 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowserBuilder
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -20,9 +23,7 @@ class IngaViewer(
             return
         }
 
-        val port = project.service<IngaSettings>().state.ingaUiUserParameters.port
-        val webView = JBCefBrowserBuilder()
-            .setUrl("http://localhost:$port/")
+        val browser = JBCefBrowserBuilder()
             .setEnableOpenDevToolsMenuItem(true)
             .build().apply {
                 jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
@@ -37,6 +38,18 @@ class IngaViewer(
                     }
                 }, cefBrowser)
             }
-        window.component.add(webView.component)
+        window.component.add(browser.component)
+
+        cs.launch {
+            var prevPort: Int? = null
+            while (isActive) {
+                val port = project.service<IngaSettings>().serverPort
+                if (port != prevPort) {
+                    prevPort = port
+                    browser.loadURL("http://localhost:$port/")
+                }
+                delay(10.seconds)
+            }
+        }
     }
 }

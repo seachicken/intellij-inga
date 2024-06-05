@@ -13,6 +13,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.pathString
@@ -21,7 +22,7 @@ import kotlin.io.path.pathString
 class IngaService(private val project: Project) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.13.12-java"
+        const val INGA_IMAGE_TAG = "0.13.13-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.1.14"
     }
@@ -169,52 +170,48 @@ class IngaService(private val project: Project) {
                 stopContainer(ingaUiContainerName)
             }
 
-            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
-                || state.ingaUiContainerParameters != state.ingaUiUserParameters
-            ) {
-                client.removeContainerCmd(ingaUiContainer.id).exec()
+            client.removeContainerCmd(ingaUiContainer.id).exec()
 
-                if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
-                    client.removeImageCmd(ingaUiContainer.image).exec()
-                }
-
-                ingaUiContainer = null
+            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
+                client.removeImageCmd(ingaUiContainer.image).exec()
             }
         }
 
-        return if (ingaUiContainer == null) {
-            client
-                .pullImageCmd(INGA_UI_IMAGE_NAME)
-                .withTag(INGA_UI_IMAGE_TAG)
-                .exec(object : PullImageResultCallback() {
-                    override fun onNext(item: PullResponseItem?) {
-                        Log.info("INGA-UI ${item?.status}")
-                        super.onNext(item)
-                    }
-                }).awaitCompletion()
-            val exposedPort = ExposedPort(state.ingaUiUserParameters.port)
-            client
-                .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
-                .withName(ingaUiContainerName)
-                .withHostConfig(
-                    HostConfig.newHostConfig()
-                        .withBinds(
-                            Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
-                        )
-                        .withPortBindings(PortBinding(Ports.Binding.bindPort(state.ingaUiUserParameters.port), exposedPort))
-                )
-                .withEntrypoint("bash")
-                .withCmd("-c", "npm run build && npm run preview -- --port ${state.ingaUiUserParameters.port}")
-                .withExposedPorts(exposedPort)
-                .exec()
-                .id.also {
-                    state.ingaUiContainerParameters = state.ingaUiUserParameters
+        client
+            .pullImageCmd(INGA_UI_IMAGE_NAME)
+            .withTag(INGA_UI_IMAGE_TAG)
+            .exec(object : PullImageResultCallback() {
+                override fun onNext(item: PullResponseItem?) {
+                    Log.info("INGA-UI ${item?.status}")
+                    super.onNext(item)
                 }
-        } else {
-            ingaUiContainer.id
-        }.also {
-            client.startContainerCmd(it).exec()
+            }).awaitCompletion()
+
+        val unusedPort = ServerSocket(0).use {
+            it.localPort
         }
+        val exposedPort = ExposedPort(unusedPort)
+
+        val containerId = client
+            .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
+            .withName(ingaUiContainerName)
+            .withHostConfig(
+                HostConfig.newHostConfig()
+                    .withBinds(
+                        Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
+                    )
+                    .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
+            )
+            .withEntrypoint("bash")
+            .withCmd("-c", "npm run build && npm run preview -- --port $unusedPort")
+            .withExposedPorts(exposedPort)
+            .exec()
+            .id
+
+        client.startContainerCmd(containerId).exec()
+
+        project.service<IngaSettings>().serverPort = unusedPort
+        return containerId
     }
 
     private fun stopContainer(containerName: String) {

@@ -5,7 +5,6 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.dsl.builder.AlignX
-import com.intellij.ui.dsl.builder.bindIntText
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
@@ -17,7 +16,6 @@ class IngaConfigurable(private val project: Project) : Configurable {
     private val baseBranchField = JTextField()
     private val includePathPatternField = JTextField()
     private val excludePathPatternField = JTextField()
-    private val portField = JTextField()
     private val bindMounts = DefaultTableModel()
 
     override fun createComponent(): JComponent {
@@ -44,9 +42,6 @@ class IngaConfigurable(private val project: Project) : Configurable {
                 row {
                     cell(mountsTable(bindMounts)).align(AlignX.FILL)
                 }
-            }
-            row("Server port:") {
-                cell(portField).bindIntText(state.ingaUiUserParameters::port)
             }
         }
     }
@@ -77,7 +72,6 @@ class IngaConfigurable(private val project: Project) : Configurable {
                 || state.ingaUserParameters.includePathPattern != includePathPatternField.text
                 || state.ingaUserParameters.excludePathPattern != excludePathPatternField.text
                 || hasChangedMounts
-                || state.ingaUiUserParameters.port != portField.text.toInt()
     }
 
     override fun apply() {
@@ -88,9 +82,6 @@ class IngaConfigurable(private val project: Project) : Configurable {
                     includePathPatternField.text,
                     excludePathPatternField.text,
                     bindMounts.dataVector.associate { it[0] as String to it[1] as String }.toMutableMap()
-                )
-                ingaUiUserParameters = IngaUiContainerParameters(
-                    portField.text.toInt()
                 )
             }
         )
