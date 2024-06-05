@@ -45,7 +45,7 @@ class IngaService(private val project: Project) {
 
         return runBlocking {
             launch {
-                startIngaUiContainer(project.service<IngaSettings>().state)
+                startIngaUiContainer()
             }
             startIngaContainer(project.service<IngaSettings>().state)
         }
@@ -158,7 +158,7 @@ class IngaService(private val project: Project) {
             }
     }
 
-    private fun startIngaUiContainer(state: IngaSettingsState): String {
+    private fun startIngaUiContainer(): String {
         var ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
