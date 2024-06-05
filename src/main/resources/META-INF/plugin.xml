@@ -27,9 +27,11 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>New Features</h2>
         <ul>
-          <li>Initial release</li>
+          <li>Fix to work with Gradle projects</li>
+          <li>Mount .gradle and .m2 by default</li>
+          <li>Fix Inga server port conflicts</li>
+          <li>Change the location of Inga settings are saved to .idea/workspace.xml</li>
         </ul>
   ]]></change-notes>
 
