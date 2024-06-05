@@ -27,7 +27,6 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>What's Changed</h2>
         <ul>
           <li>Fix to work with Gradle projects</li>
           <li>Mount .gradle and .m2 by default</li>
