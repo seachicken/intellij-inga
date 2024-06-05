@@ -3,7 +3,6 @@ package inga.intellijinga
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.command.PullImageResultCallback
-import com.github.dockerjava.api.exception.NotModifiedException
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
@@ -21,7 +20,7 @@ import kotlin.io.path.pathString
 class IngaService(private val project: Project) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.13.11-java"
+        const val INGA_IMAGE_TAG = "0.13.12-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.1.14"
     }
