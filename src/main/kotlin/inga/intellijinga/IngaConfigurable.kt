@@ -23,8 +23,8 @@ class IngaConfigurable(private val project: Project) : Configurable {
     override fun createComponent(): JComponent {
         val state = project.service<IngaSettings>().state
         bindMounts.apply {
-            addColumn("Source")
-            addColumn("Destination")
+            addColumn("Source (Host)")
+            addColumn("Destination (Container)")
             for (mount in state.ingaUserParameters.additionalMounts.entries) {
                 addRow(arrayOf(mount.key, mount.value))
             }
