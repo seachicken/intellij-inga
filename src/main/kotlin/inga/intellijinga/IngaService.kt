@@ -13,6 +13,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.pathString
 
@@ -130,6 +131,14 @@ class IngaService(private val project: Project) {
             Bind(project.basePath, Volume("/work"), AccessMode.ro),
             Bind(ingaTempPath.pathString, Volume("/inga-temp"), AccessMode.rw)
         )
+        val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle");
+        if (Files.exists(gradleHome)) {
+            binds.add(Bind(gradleHome.pathString, Volume("/root/.gradle"), AccessMode.ro))
+        }
+        val mavenHome = Paths.get(System.getProperty("user.home")).resolve(".m2");
+        if (Files.exists(mavenHome)) {
+            binds.add(Bind(mavenHome.pathString, Volume("/root/.m2"), AccessMode.ro))
+        }
         for ((src, dst) in state.ingaUserParameters.additionalMounts) {
             binds.add(Bind(src, Volume(dst), AccessMode.ro))
         }
