@@ -24,7 +24,7 @@ class IngaService(private val project: Project) {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
         const val INGA_IMAGE_TAG = "0.13.13-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.1.14"
+        const val INGA_UI_IMAGE_TAG = "0.1.15"
     }
 
     private val ingaContainerName = "inga_${project.name}"
