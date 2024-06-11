@@ -63,6 +63,6 @@ tasks {
 
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
-        channels.set(listOf("beta"))
+        channels.set(listOf(project.version.toString().substringAfter('-', "").substringBefore('.').ifEmpty { "default" }))
     }
 }
