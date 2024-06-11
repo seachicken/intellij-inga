@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "inga"
-version = "0.2.0"
+version = "0.2.0-beta.0"
 
 repositories {
     mavenCentral()
@@ -63,6 +63,6 @@ tasks {
 
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
-        channels.set(listOf("beta"))
+        channels.set(listOf(project.version.toString().substringAfter('-', "").substringBefore('.').ifEmpty { "default" }))
     }
 }
