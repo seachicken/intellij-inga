@@ -27,11 +27,15 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>New Features</h2>
         <ul>
-          <li>Fix to work with Gradle projects</li>
-          <li>Mount .gradle and .m2 by default</li>
-          <li>Fix Inga server port conflicts</li>
-          <li>Change the location of Inga settings are saved to .idea/workspace.xml</li>
+            <li>Show the impact of current code changes <a href="https://github.com/seachicken/inga-ui/pull/5">inga-ui (#5)</a></li>
+            <li>Drag the service nodes to avoid overlapping</li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Grouping the same node <a href="https://github.com/seachicken/inga-ui/pull/3">inga-ui (#3)</a></li>
+            <li>Fix disappearing edges</li>
         </ul>
   ]]></change-notes>
 
