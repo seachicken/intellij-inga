@@ -4,8 +4,8 @@
 
 Visualize the entry points impacted by your code changes. [Inga](https://github.com/seachicken/inga) server and [LSP4IJ](https://github.com/redhat-developer/lsp4ij) running on the local container communicate and analyze code in real-time.
 
-<a href="https://www.youtube.com/watch?v=VUQEpccEvTs" target="_blank">
-  <img src="https://img.youtube.com/vi/VUQEpccEvTs/maxresdefault.jpg" alt="Inga - Impact analysis" width="480" height="270" />
+<a href="https://www.youtube.com/watch?v=D1PpRi0yvKY" target="_blank">
+  <img src="https://img.youtube.com/vi/D1PpRi0yvKY/maxresdefault.jpg" alt="Inga - Impact analysis" width="480" height="270" />
 </a>
 
 ## Supported Languages
