@@ -85,7 +85,7 @@ class IngaService(private val project: Project) {
                 client.removeContainerCmd(ingaContainer.id).exec()
 
                 if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG") {
-                    client.removeImageCmd(ingaContainer.image).exec()
+                    removeImageIfUnused(ingaContainer.image)
                 }
 
                 ingaContainer = null
@@ -173,7 +173,7 @@ class IngaService(private val project: Project) {
             client.removeContainerCmd(ingaUiContainer.id).exec()
 
             if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
-                client.removeImageCmd(ingaUiContainer.image).exec()
+                removeImageIfUnused(ingaUiContainer.image)
             }
         }
 
@@ -222,5 +222,16 @@ class IngaService(private val project: Project) {
             ?.let {
                 client.stopContainerCmd(it.id).exec()
             }
+    }
+
+    private fun removeImageIfUnused(imageName: String) {
+        val usedContainers = client
+            .listContainersCmd()
+            .withShowAll(true)
+            .exec()
+            .filter { it.image.contains(imageName) }
+        if (usedContainers.isEmpty()) {
+            client.removeImageCmd(imageName).exec()
+        }
     }
 }
