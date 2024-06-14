@@ -27,15 +27,11 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>New Features</h2>
-        <ul>
-            <li>Show the impact of current code changes <a href="https://github.com/seachicken/inga-ui/pull/5">inga-ui (#5)</a></li>
-            <li>Drag the service nodes to avoid overlapping</li>
-        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Grouping the same node <a href="https://github.com/seachicken/inga-ui/pull/3">inga-ui (#3)</a></li>
-            <li>Fix disappearing edges</li>
+            <li>Fix the problem that initialize does not finish</li>
+            <li>Improve the service map response to code changes</li>
+            <li>Fix crashing if Inga image is already used</li>
         </ul>
   ]]></change-notes>
 
