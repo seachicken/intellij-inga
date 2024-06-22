@@ -18,3 +18,12 @@ jobs:
       with:
         language: "java"
         exclude: "src/test/**"
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        name: inga-report
+        path: inga-report/
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+      with:
+        artifact_name: inga-report
