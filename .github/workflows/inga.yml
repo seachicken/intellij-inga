@@ -21,7 +21,7 @@ jobs:
         fetch-depth: 0
         # https://github.com/actions/checkout/issues/124
         ref: ${{ github.event.pull_request.head.ref }}
-    - uses: seachicken/inga-action@action-report
+    - uses: seachicken/inga-action@main
       with:
         language: "java"
         exclude: "src/test/**"
