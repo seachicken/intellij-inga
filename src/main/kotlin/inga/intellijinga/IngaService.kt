@@ -75,6 +75,7 @@ class IngaService(private val project: Project) {
     }
 
     private fun startIngaContainer(state: IngaSettingsState): String {
+        // test
         var ingaContainer = client
             .listContainersCmd()
             .withShowAll(true)
