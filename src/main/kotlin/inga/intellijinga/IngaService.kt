@@ -11,6 +11,7 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.net.ServerSocket
@@ -65,6 +66,12 @@ class IngaService(private val project: Project) {
                 stopContainer(ingaUiContainerName)
             }
         }
+    }
+
+    fun clearCachesAndRestart() {
+        LanguageServerManager.getInstance(project).stop("ingaLanguageServer");
+        Files.walk(ingaTempPath).map { it.toFile() }.forEach { it.delete() }
+        LanguageServerManager.getInstance(project).start("ingaLanguageServer");
     }
 
     private fun startIngaContainer(state: IngaSettingsState): String {
