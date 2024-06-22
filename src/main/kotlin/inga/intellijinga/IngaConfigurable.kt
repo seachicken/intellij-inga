@@ -43,6 +43,11 @@ class IngaConfigurable(private val project: Project) : Configurable {
                     cell(mountsTable(bindMounts)).align(AlignX.FILL)
                 }
             }
+            row {
+                button("Clear Caches and Restart") {
+                    project.service<IngaService>().clearCachesAndRestart()
+                }
+            }
         }
     }
 
