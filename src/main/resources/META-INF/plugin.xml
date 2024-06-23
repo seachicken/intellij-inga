@@ -27,11 +27,15 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>New Features</h2>
+        <ul>
+            <li>Add cache clear to settings</li>
+            <li>Output LSP console log</li>
+        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix the problem that initialize does not finish</li>
-            <li>Improve the service map response to code changes</li>
-            <li>Fix crashing if Inga image is already used</li>
+            <li>Fix impact map sync</li>
+            <li>Fix error when file path is long</li>
         </ul>
   ]]></change-notes>
 
