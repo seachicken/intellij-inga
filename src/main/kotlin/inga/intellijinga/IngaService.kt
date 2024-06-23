@@ -23,9 +23,9 @@ import kotlin.io.path.pathString
 class IngaService(private val project: Project) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.16.0-java"
+        const val INGA_IMAGE_TAG = "0.17.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.4.1"
+        const val INGA_UI_IMAGE_TAG = "0.4.3"
     }
 
     private val ingaContainerName = "inga_${project.name}"
