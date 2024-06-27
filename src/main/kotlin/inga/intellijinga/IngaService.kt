@@ -12,6 +12,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.net.ServerSocket
@@ -20,7 +21,10 @@ import java.nio.file.Paths
 import kotlin.io.path.pathString
 
 @Service(Service.Level.PROJECT)
-class IngaService(private val project: Project) {
+class IngaService(
+    private val project: Project,
+    private val cs: CoroutineScope
+) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
         const val INGA_IMAGE_TAG = "0.17.1-java"
@@ -45,7 +49,7 @@ class IngaService(private val project: Project) {
         }
 
         return runBlocking {
-            launch {
+            cs.launch {
                 startIngaUiContainer()
             }
             startIngaContainer(project.service<IngaSettings>().state)
@@ -59,10 +63,10 @@ class IngaService(private val project: Project) {
         }
 
         runBlocking {
-            launch {
+            cs.launch {
                 stopContainer(ingaContainerName)
             }
-            launch {
+            cs.launch {
                 stopContainer(ingaUiContainerName)
             }
         }
@@ -166,7 +170,7 @@ class IngaService(private val project: Project) {
     }
 
     private fun startIngaUiContainer(): String {
-        var ingaUiContainer = client
+        val ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
