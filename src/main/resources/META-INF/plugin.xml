@@ -27,10 +27,8 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Bug Fixes</h2>
         <ul>
-            <li>Support for multiple workspaces</li>
-            <li>Fix crash when modifying excluded code</li>
+            <li>Improve performance for initialize</li>
         </ul>
   ]]></change-notes>
 
