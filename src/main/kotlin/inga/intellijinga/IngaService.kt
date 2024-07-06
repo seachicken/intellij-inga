@@ -12,9 +12,15 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerManager
+import com.redhat.devtools.lsp4ij.LanguageServerWrapper
+import com.redhat.devtools.lsp4ij.ServerStatus
+import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
+import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.messages.Message
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -27,7 +33,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.17.2-java"
+        const val INGA_IMAGE_TAG = "0.17.4-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.4.3"
     }
@@ -73,9 +79,35 @@ class IngaService(
     }
 
     fun clearCachesAndRestart() {
-        LanguageServerManager.getInstance(project).stop("ingaLanguageServer");
-        Files.walk(ingaTempPath).map { it.toFile() }.forEach { it.delete() }
-        LanguageServerManager.getInstance(project).start("ingaLanguageServer");
+        fun clearCachesAndStart() {
+            Files.walk(ingaTempPath).map { it.toFile() }.forEach { it.delete() }
+            LanguageServerManager.getInstance(project).start("ingaLanguageServer")
+        }
+
+        if (LanguageServerManager.getInstance(project).getServerStatus("ingaLanguageServer") == ServerStatus.stopped) {
+            clearCachesAndStart()
+        } else {
+            LanguageServerLifecycleManager.getInstance(project)
+                .addLanguageServerLifecycleListener(object : LanguageServerLifecycleListener {
+                    override fun handleStatusChanged(server: LanguageServerWrapper?) {
+                        if (server?.serverStatus == ServerStatus.stopped) {
+                            clearCachesAndStart()
+                            LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
+                        }
+                    }
+
+                    override fun handleLSPMessage(message: Message?, consumer: MessageConsumer?, server: LanguageServerWrapper?) {
+                    }
+
+                    override fun handleError(server: LanguageServerWrapper?, e: Throwable?) {
+                        LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
+                    }
+
+                    override fun dispose() {
+                    }
+                })
+            LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
+        }
     }
 
     private fun startIngaContainer(state: IngaSettingsState): String {
