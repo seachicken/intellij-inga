@@ -27,8 +27,13 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>Improvements</h2>
         <ul>
-            <li>Improve performance for initialize</li>
+            <li>Improved Java analysis</li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Fix startup when clearing the cache</li>
         </ul>
   ]]></change-notes>
 
