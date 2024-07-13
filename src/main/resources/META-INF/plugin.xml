@@ -29,11 +29,11 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li>Improved Java analysis</li>
+            <li>Reduce the container size of inga-ui</li>
         </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix startup when clearing the cache</li>
+            <li>Fix code reference search</li>
         </ul>
   ]]></change-notes>
 
