@@ -33,9 +33,9 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.17.4-java"
+        const val INGA_IMAGE_TAG = "0.17.6-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.4.3"
+        const val INGA_UI_IMAGE_TAG = "0.4.5"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -241,13 +241,12 @@ class IngaService(
             .withHostConfig(
                 HostConfig.newHostConfig()
                     .withBinds(
-                        Bind("${ingaTempPath.pathString}/report", Volume("/inga-ui/inga-report"), AccessMode.rw)
+                        Bind("${ingaTempPath.pathString}/report", Volume("/html/report"), AccessMode.rw)
                     )
                     .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
             )
-            .withEntrypoint("bash")
-            .withCmd("-c", "npm run build && npm run preview -- --port $unusedPort")
             .withExposedPorts(exposedPort)
+            .withCmd("$unusedPort")
             .exec()
             .id
 
