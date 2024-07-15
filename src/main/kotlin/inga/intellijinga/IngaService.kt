@@ -7,7 +7,6 @@ import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
-import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -33,14 +32,13 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.17.6-java"
+        const val INGA_IMAGE_TAG = "0.18.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.4.5"
+        const val INGA_UI_IMAGE_TAG = "0.4.6"
     }
 
     private val ingaContainerName = "inga_${project.name}"
     private val ingaUiContainerName = "inga-ui_${project.name}"
-    private val ingaTempPath = Paths.get(PathManager.getPluginsPath(), "intellij-inga", ingaContainerName)
     private lateinit var client: DockerClient
 
     fun start(): String {
@@ -55,6 +53,7 @@ class IngaService(
         }
 
         return runBlocking {
+            client.createVolumeCmd().withName(ingaContainerName).exec()
             cs.launch {
                 startIngaUiContainer()
             }
@@ -69,18 +68,38 @@ class IngaService(
         }
 
         runBlocking {
-            cs.launch {
-                stopContainer(ingaContainerName)
-            }
-            cs.launch {
-                stopContainer(ingaUiContainerName)
-            }
+            listOf(
+                cs.launch {
+                    stopContainer(ingaContainerName)
+                },
+                cs.launch {
+                    stopContainer(ingaUiContainerName)
+                }
+            ).forEach { it.join() }
         }
     }
 
     fun clearCachesAndRestart() {
         fun clearCachesAndStart() {
-            Files.walk(ingaTempPath).map { it.toFile() }.forEach { it.delete() }
+            client
+                .listContainersCmd()
+                .withShowAll(true)
+                .exec()
+                .find(isTargetContainer(ingaContainerName))
+                ?.let {
+                    client.removeContainerCmd(it.id).exec()
+                    removeImageIfUnused(it.image)
+                }
+            client
+                .listContainersCmd()
+                .withShowAll(true)
+                .exec()
+                .find(isTargetContainer(ingaUiContainerName))
+                ?.let {
+                    client.removeContainerCmd(it.id).exec()
+                    removeImageIfUnused(it.image)
+                }
+            client.removeVolumeCmd(ingaContainerName).exec()
             LanguageServerManager.getInstance(project).start("ingaLanguageServer")
         }
 
@@ -89,8 +108,10 @@ class IngaService(
         } else {
             LanguageServerLifecycleManager.getInstance(project)
                 .addLanguageServerLifecycleListener(object : LanguageServerLifecycleListener {
+                    private var started = false
                     override fun handleStatusChanged(server: LanguageServerWrapper?) {
-                        if (server?.serverStatus == ServerStatus.stopped) {
+                        if (!started && server?.serverStatus == ServerStatus.stopped) {
+                            started = true
                             clearCachesAndStart()
                             LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
                         }
@@ -115,7 +136,7 @@ class IngaService(
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.names[0].substringAfter("/") == ingaContainerName }
+            .find(isTargetContainer(ingaContainerName))
 
         if (ingaContainer != null) {
             if (ingaContainer.state == "running") {
@@ -156,7 +177,7 @@ class IngaService(
 
     private fun createIngaContainer(state: IngaSettingsState): String {
         val command = mutableListOf(
-            "--mode", "server", "--root-path", "/work", "--temp-path", "/inga-temp",
+            "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-temp",
         )
         if (state.ingaUserParameters.baseBranch.isNotEmpty()) {
             command += "--base-commit"
@@ -173,7 +194,7 @@ class IngaService(
 
         val binds = mutableListOf(
             Bind(project.basePath, Volume("/work"), AccessMode.ro),
-            Bind(ingaTempPath.pathString, Volume("/inga-temp"), AccessMode.rw)
+            Bind(ingaContainerName, Volume("/inga-output"), AccessMode.rw)
         )
         val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
         if (Files.exists(gradleHome)) {
@@ -192,7 +213,11 @@ class IngaService(
             .withName(ingaContainerName)
             .withStdinOpen(true)
             .withPlatform("linux/amd64")
-            .withHostConfig(HostConfig.newHostConfig().withBinds(binds))
+            .withHostConfig(
+                HostConfig.newHostConfig()
+                    .withBinds(binds)
+                    .withTmpFs(mapOf("/inga-temp" to "rw,noexec"))
+            )
             .withWorkingDir("/work")
             .withCmd(command)
             .exec()
@@ -206,7 +231,7 @@ class IngaService(
             .listContainersCmd()
             .withShowAll(true)
             .exec()
-            .find { it.names[0].substringAfter("/") == ingaUiContainerName }
+            .find(isTargetContainer(ingaUiContainerName))
 
         if (ingaUiContainer != null) {
             if (ingaUiContainer.state == "running") {
@@ -241,7 +266,7 @@ class IngaService(
             .withHostConfig(
                 HostConfig.newHostConfig()
                     .withBinds(
-                        Bind("${ingaTempPath.pathString}/report", Volume("/html/report"), AccessMode.rw)
+                        Bind(ingaContainerName, Volume("/html/report"), AccessMode.ro)
                     )
                     .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
             )
@@ -260,7 +285,7 @@ class IngaService(
         client
             .listContainersCmd()
             .exec()
-            .find { it.names[0].substringAfter("/") == containerName }
+            .find(isTargetContainer(containerName))
             ?.let {
                 client.stopContainerCmd(it.id).exec()
             }
@@ -276,4 +301,7 @@ class IngaService(
             client.removeImageCmd(imageName).exec()
         }
     }
+
+    private fun isTargetContainer(name: String): (Container) -> Boolean =
+        { it.names[0].substringAfter("/") == name }
 }
