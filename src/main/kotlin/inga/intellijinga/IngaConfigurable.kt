@@ -38,7 +38,7 @@ class IngaConfigurable(private val project: Project) : Configurable {
                 cell(excludePathPatternField).bindText(state.ingaUserParameters::excludePathPattern)
                     .comment("Filenames of glob pattern matching to exclude from analysis. (e.g., \"src/test/**\")")
             }
-            group("Additional mounts") {
+            group("Additional bind mounts") {
                 row {
                     cell(mountsTable(bindMounts)).align(AlignX.FILL)
                 }

@@ -18,7 +18,8 @@ class IngaLanguageServer : LanguageServerFactory {
                 commands = listOf(
                     // ProcessBuilder.environment() does not work at release, getting the docker full path
                     findDocker(),
-                    "attach", ingaContainerId)
+                    "attach", ingaContainerId
+                )
                 super.start()
             }
 
