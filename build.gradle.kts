@@ -19,7 +19,7 @@ intellij {
 
     plugins.set(
         listOf(
-            "com.redhat.devtools.lsp4ij:0.0.2",
+            "com.redhat.devtools.lsp4ij:0.3.0",
         )
     )
 }
