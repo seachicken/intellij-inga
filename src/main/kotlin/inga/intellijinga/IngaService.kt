@@ -32,7 +32,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.18.0-java"
+        const val INGA_IMAGE_TAG = "0.18.3-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.4.8"
     }
@@ -181,15 +181,15 @@ class IngaService(
         )
         if (state.ingaUserParameters.baseBranch.isNotEmpty()) {
             command += "--base-commit"
-            command += state.ingaUserParameters.baseBranch
+            command += "\"${state.ingaUserParameters.baseBranch}\""
         }
         if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
-            command += state.ingaUserParameters.includePathPattern
+            command += "\"${state.ingaUserParameters.includePathPattern}\""
         }
         if (state.ingaUserParameters.excludePathPattern.isNotEmpty()) {
             command += "--exclude"
-            command += state.ingaUserParameters.excludePathPattern
+            command += "\"${state.ingaUserParameters.excludePathPattern}\""
         }
 
         val binds = mutableListOf(
@@ -218,8 +218,9 @@ class IngaService(
                     .withBinds(binds)
                     .withTmpFs(mapOf("/inga-temp" to "rw,noexec"))
             )
-            .withWorkingDir("/work")
-            .withCmd(command)
+            .withEntrypoint("bash")
+            .withCmd("-c", "cp /work/.git/index /inga-temp/git-index && inga ${command.joinToString(" ")}")
+            .withEnv("GIT_INDEX_FILE=/inga-temp/git-index")
             .exec()
             .id.also {
                 state.ingaContainerParameters = state.ingaUserParameters
