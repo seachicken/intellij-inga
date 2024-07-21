@@ -29,7 +29,12 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li>Improve performance for analyze</li>
+            <li>Faster Impact Map sync interval</li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Fix reference search for Kotlin</li>
+            <li>Output error log to LSP console</li>
         </ul>
   ]]></change-notes>
 
