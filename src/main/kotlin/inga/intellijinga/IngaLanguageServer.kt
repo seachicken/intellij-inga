@@ -4,8 +4,10 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.util.EnvironmentUtil
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
+import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
+import org.eclipse.lsp4j.services.LanguageServer
 import java.io.File
 import java.nio.file.Paths
 import kotlin.io.path.pathString
@@ -28,6 +30,14 @@ class IngaLanguageServer : LanguageServerFactory {
                 super.stop()
             }
         }
+    }
+
+    override fun createLanguageClient(project: Project): LanguageClientImpl {
+        return IngaLanguageClient(project)
+    }
+
+    override fun getServerInterface(): Class<out LanguageServer> {
+        return IngaLanguageServerApi::class.java
     }
 
     fun findDocker(): String =

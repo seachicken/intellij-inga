@@ -32,7 +32,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.18.3-java"
+        const val INGA_IMAGE_TAG = "0.19.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.4.8"
     }
@@ -179,10 +179,6 @@ class IngaService(
         val command = mutableListOf(
             "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-temp",
         )
-        if (state.ingaUserParameters.baseBranch.isNotEmpty()) {
-            command += "--base-commit"
-            command += state.ingaUserParameters.baseBranch
-        }
         if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
             command += state.ingaUserParameters.includePathPattern
