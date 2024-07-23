@@ -26,14 +26,19 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
     override fun handleServerStatusChanged(serverStatus: ServerStatus?) {
         if (serverStatus == ServerStatus.started) {
             (languageServer as? IngaLanguageServerApi)?.diffChanged(
-                gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
+                DiffChanged(
+                    gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
+                )
             )
         }
     }
 
     override fun contentsChanged(event: VirtualFileEvent) {
         (languageServer as? IngaLanguageServerApi)?.diffChanged(
-            gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
+            DiffChanged(
+                gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch),
+                event.file.url
+            )
         )
     }
 

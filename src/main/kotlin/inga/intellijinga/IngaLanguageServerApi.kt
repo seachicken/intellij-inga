@@ -5,5 +5,7 @@ import org.eclipse.lsp4j.services.LanguageServer
 
 interface IngaLanguageServerApi : LanguageServer {
     @JsonNotification("inga/diffChanged")
-    fun diffChanged(diff: String)
+    fun diffChanged(param: DiffChanged)
 }
+
+data class DiffChanged(val diff: String, val uri: String? = null)
