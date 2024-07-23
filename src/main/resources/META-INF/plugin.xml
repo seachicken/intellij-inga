@@ -27,9 +27,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
+        <h2>Bug Fixes</h2>
         <ul>
-            <li>Performance improvements</li>
+            <li>Fix Impact Map updates</li>
         </ul>
   ]]></change-notes>
 
