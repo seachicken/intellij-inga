@@ -16,12 +16,10 @@ class IngaLanguageServer : LanguageServerFactory {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
         return object : ProcessStreamConnectionProvider() {
             override fun start() {
+                val docker = findDocker()
                 val ingaContainerId = project.service<IngaService>().start()
-                commands = listOf(
-                    // ProcessBuilder.environment() does not work at release, getting the docker full path
-                    findDocker(),
-                    "attach", ingaContainerId
-                )
+                // ProcessBuilder.environment() does not work at release, getting the docker full path
+                commands = listOf(docker, "attach", ingaContainerId)
                 super.start()
             }
 
