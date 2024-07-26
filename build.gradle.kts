@@ -27,7 +27,6 @@ intellij {
 dependencies {
     implementation("com.github.docker-java:docker-java-core:3.3.6")
     implementation("com.github.docker-java:docker-java-transport-httpclient5:3.3.6")
-    implementation("org.slf4j:slf4j-api:2.0.13")
 }
 
 configurations {
