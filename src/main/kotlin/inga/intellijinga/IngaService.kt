@@ -68,14 +68,13 @@ class IngaService(
         }
 
         runBlocking {
-            listOf(
-                cs.launch {
-                    stopContainer(ingaContainerName)
-                },
-                cs.launch {
-                    stopContainer(ingaUiContainerName)
-                }
-            ).forEach { it.join() }
+            cs.launch {
+                stopContainer(ingaContainerName)
+            }
+            cs.launch {
+                // httpd does not terminate in time when using the stop container
+                killContainer(ingaUiContainerName)
+            }
         }
     }
 
@@ -231,7 +230,7 @@ class IngaService(
 
         if (ingaUiContainer != null) {
             if (ingaUiContainer.state == "running") {
-                stopContainer(ingaUiContainerName)
+                killContainer(ingaUiContainerName)
             }
 
             client.removeContainerCmd(ingaUiContainer.id).exec()
@@ -284,6 +283,16 @@ class IngaService(
             .find(isTargetContainer(containerName))
             ?.let {
                 client.stopContainerCmd(it.id).exec()
+            }
+    }
+
+    private fun killContainer(containerName: String) {
+        client
+            .listContainersCmd()
+            .exec()
+            .find(isTargetContainer(containerName))
+            ?.let {
+                client.killContainerCmd(it.id).exec()
             }
     }
 
