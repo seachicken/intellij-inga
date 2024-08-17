@@ -120,6 +120,7 @@ class IngaService(
                     }
 
                     override fun handleError(server: LanguageServerWrapper?, e: Throwable?) {
+                        Log.warn("INGA restart failed", e)
                         LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
                     }
 
