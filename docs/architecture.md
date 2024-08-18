@@ -23,7 +23,7 @@ columns 5
   IDE -- "HTTP" --> inga_ui
   IDE -- "LSP" --> inga
   inga -- "bind mount" --> Source
-  inga_ui --> DockerVolume
-  inga --> DockerVolume
+  inga_ui -- "read" --> DockerVolume
+  inga -- "write" --> DockerVolume
   inga --> Source
 ```
