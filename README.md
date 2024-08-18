@@ -16,3 +16,4 @@ Visualize the entry points impacted by your code changes. [Inga](https://github.
 ## Requirements
 
 - Docker CLI
+  - Code analysis is running on the container, see [architecture.md](https://github.com/seachicken/intellij-inga/blob/main/docs/architecture.md)
