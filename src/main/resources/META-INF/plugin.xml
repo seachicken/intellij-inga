@@ -29,7 +29,11 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li><a href="https://github.com/seachicken/inga/releases/tag/v0.21.0">Update Inga to v0.21.0 from v0.20.0</a></li>
+            <li><a href="https://github.com/seachicken/inga/releases/tag/v0.21.1">Update Inga to v0.21.1 from v0.21.0</a></li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Immediately stop the plugin when exiting IntelliJ</li>
         </ul>
   ]]></change-notes>
 
