@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "inga"
-version = "0.4.4"
+version = "0.4.5"
 
 repositories {
     mavenCentral()
@@ -51,6 +51,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("232")
+        untilBuild.set("")
     }
 
     signPlugin {
