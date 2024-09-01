@@ -29,7 +29,11 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li><a href="https://github.com/seachicken/inga/releases/tag/v0.21.3">Update Inga to v0.21.3 from v0.21.2</a></li>
+            <li>Improve Kotlin code analysis</li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Prevent infinite loops for analysis</li>
         </ul>
   ]]></change-notes>
 
