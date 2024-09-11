@@ -23,6 +23,7 @@
         <h2>Requirements</h2>
         <ul>
             <li>Docker CLI</li>
+            <li>git</li>
         </ul>
   ]]></description>
 
