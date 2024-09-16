@@ -30,11 +30,7 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li>Improve Kotlin code analysis</li>
-        </ul>
-        <h2>Bug Fixes</h2>
-        <ul>
-            <li>Prevent infinite loops for analysis</li>
+            <li>Incremental analysis to improve performance</li>
         </ul>
   ]]></change-notes>
 
