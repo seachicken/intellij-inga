@@ -28,9 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
+        <h2>Bug Fixes</h2>
         <ul>
-            <li>Incremental analysis to improve performance</li>
+            <li>Fix reference find in lambda</li>
         </ul>
   ]]></change-notes>
 
