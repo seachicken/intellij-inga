@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "inga"
-version = "0.5.1"
+version = "0.5.2-beta.0"
 
 repositories {
     mavenCentral()
