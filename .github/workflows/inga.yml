@@ -16,11 +16,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        # https://github.com/actions/checkout/issues/124
-        ref: ${{ github.event.pull_request.head.ref }}
     - uses: seachicken/inga-action@main
       with:
         language: "java"
