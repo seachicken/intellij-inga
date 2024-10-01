@@ -28,9 +28,13 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>Improvements</h2>
+        <ul>
+            <li>Supports HTTP PATCH, PUT, and DELETE method searches</li>
+        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix reference find in lambda</li>
+            <li>Fix to process restart</li>
         </ul>
   ]]></change-notes>
 

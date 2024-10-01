@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "inga"
-version = "0.5.2-beta.0"
+version = "0.5.2-beta.1"
 
 repositories {
     mavenCentral()
@@ -21,7 +21,7 @@ intellij {
         listOf(
             // If you want to try the nightly build, the version is "{version}@nightly"
             // https://plugins.jetbrains.com/api/plugins/23257/updates?channel=nightly&size=1
-            "com.redhat.devtools.lsp4ij:0.6.0-20240927-013153@nightly",
+            "com.redhat.devtools.lsp4ij:0.6.0",
         )
     )
 }
