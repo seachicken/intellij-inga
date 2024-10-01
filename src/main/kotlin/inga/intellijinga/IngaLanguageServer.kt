@@ -1,31 +1,26 @@
 package inga.intellijinga
 
+import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.util.EnvironmentUtil
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
-import com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider
+import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
-import java.io.File
-import java.nio.file.Paths
-import kotlin.io.path.pathString
 
 class IngaLanguageServer : LanguageServerFactory {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
-        return object : ProcessStreamConnectionProvider() {
+        return object : OSProcessStreamConnectionProvider() {
             override fun start() {
-                val docker = findDocker()
                 val ingaContainerId = project.service<IngaService>().start()
-                // ProcessBuilder.environment() does not work at release, getting the docker full path
-                commands = listOf(docker, "attach", ingaContainerId)
+                commandLine = GeneralCommandLine("docker", "attach", ingaContainerId)
                 super.start()
             }
 
             override fun stop() {
-                project.service<IngaService>().stop()
                 super.stop()
+                project.service<IngaService>().stop()
             }
         }
     }
@@ -37,11 +32,4 @@ class IngaLanguageServer : LanguageServerFactory {
     override fun getServerInterface(): Class<out LanguageServer> {
         return IngaLanguageServerApi::class.java
     }
-
-    fun findDocker(): String =
-        EnvironmentUtil.getEnvironmentMap().values
-            .flatMap { it.split(File.pathSeparator) }
-            .map { File(Paths.get(it, "docker").pathString) }
-            .find { it.exists() && it.canExecute() }
-            ?.path ?: throw IllegalStateException("docker not found on the system")
 }

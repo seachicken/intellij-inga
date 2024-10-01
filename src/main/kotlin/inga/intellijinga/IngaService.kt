@@ -32,7 +32,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.22.1-java"
+        const val INGA_IMAGE_TAG = "0.22.3-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.5.1"
     }
@@ -67,15 +67,8 @@ class IngaService(
             throw IllegalStateException("Inga analysis is not running")
         }
 
-        runBlocking {
-            cs.launch {
-                stopContainer(ingaContainerName)
-            }
-            cs.launch {
-                // httpd does not terminate in time when using the stop container
-                killContainer(ingaUiContainerName)
-            }
-        }
+        // httpd does not terminate in time when using the stop container
+        killContainer(ingaUiContainerName)
     }
 
     fun clearCachesAndRestart() {
@@ -108,6 +101,8 @@ class IngaService(
             LanguageServerLifecycleManager.getInstance(project)
                 .addLanguageServerLifecycleListener(object : LanguageServerLifecycleListener {
                     private var started = false
+                    private var retryCount = 0
+                    private var maxCount = 3
                     override fun handleStatusChanged(server: LanguageServerWrapper?) {
                         if (!started && server?.serverStatus == ServerStatus.stopped) {
                             started = true
@@ -120,7 +115,12 @@ class IngaService(
                     }
 
                     override fun handleError(server: LanguageServerWrapper?, e: Throwable?) {
-                        Log.warn("INGA restart failed", e)
+                        retryCount++
+                        Log.warn("INGA restart failed. retry: ${retryCount}/${maxCount}", e)
+                        if (retryCount <= maxCount) {
+                            LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
+                            return
+                        }
                         LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
                     }
 
