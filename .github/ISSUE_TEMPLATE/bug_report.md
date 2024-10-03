@@ -8,9 +8,16 @@ assignees: ''
 ---
 
 **Describe the bug**
-<!-- A clear and concise description of what the bug is. -->
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
 
 **Your Environment**
 - OS: 
-- Docker: [e.g. Docker Desktop, Rancher Desktop]
-- Inga for IntelliJ version:
+- Docker: [e.g. Docker Desktop, Rancher Desktop] 
+- Plugin Version: 
