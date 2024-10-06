@@ -28,13 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
-        <ul>
-            <li>Supports HTTP PATCH, PUT, and DELETE method searches</li>
-        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix to process restart</li>
+            <li>Fix node grouping on Impact Map</li>
         </ul>
   ]]></change-notes>
 
