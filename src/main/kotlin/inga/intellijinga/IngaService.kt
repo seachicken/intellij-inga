@@ -67,8 +67,7 @@ class IngaService(
             throw IllegalStateException("Inga analysis is not running")
         }
 
-        // httpd does not terminate in time when using the stop container
-        killContainer(ingaUiContainerName)
+        stopContainer(ingaUiContainerName)
     }
 
     fun clearCachesAndRestart() {
@@ -231,7 +230,7 @@ class IngaService(
 
         if (ingaUiContainer != null) {
             if (ingaUiContainer.state == "running") {
-                killContainer(ingaUiContainerName)
+                stopContainer(ingaUiContainerName)
             }
 
             client.removeContainerCmd(ingaUiContainer.id).exec()
@@ -265,6 +264,8 @@ class IngaService(
                         Bind(ingaContainerName, Volume("/html/report"), AccessMode.ro)
                     )
                     .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
+                    // add to terminate httpd with sigterm
+                    .withInit(true)
             )
             .withExposedPorts(exposedPort)
             .withCmd("$unusedPort")
@@ -284,16 +285,6 @@ class IngaService(
             .find(isTargetContainer(containerName))
             ?.let {
                 client.stopContainerCmd(it.id).exec()
-            }
-    }
-
-    private fun killContainer(containerName: String) {
-        client
-            .listContainersCmd()
-            .exec()
-            .find(isTargetContainer(containerName))
-            ?.let {
-                client.killContainerCmd(it.id).exec()
             }
     }
 
