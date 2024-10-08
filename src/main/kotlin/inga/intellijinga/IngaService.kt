@@ -34,7 +34,7 @@ class IngaService(
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
         const val INGA_IMAGE_TAG = "0.24.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.7.0"
+        const val INGA_UI_IMAGE_TAG = "0.7.1"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -67,7 +67,12 @@ class IngaService(
             throw IllegalStateException("Inga analysis is not running")
         }
 
-        stopContainer(ingaUiContainerName)
+        runBlocking {
+            cs.launch {
+                stopContainer(ingaUiContainerName)
+            }
+            stopContainer(ingaContainerName)
+        }
     }
 
     fun clearCachesAndRestart() {
