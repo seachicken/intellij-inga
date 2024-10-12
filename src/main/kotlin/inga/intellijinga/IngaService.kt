@@ -3,6 +3,7 @@ package inga.intellijinga
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.exception.DockerException
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
@@ -142,25 +143,7 @@ class IngaService(
             .exec()
             .find(isTargetContainer(ingaContainerName))
 
-        if (ingaContainer != null) {
-            if (ingaContainer.state == "running") {
-                stopContainer(ingaContainerName)
-            }
-
-            if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
-                || state.ingaContainerParameters != state.ingaUserParameters
-            ) {
-                client.removeContainerCmd(ingaContainer.id).exec()
-
-                if (ingaContainer.image != "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG") {
-                    removeImageIfUnused(ingaContainer.image)
-                }
-
-                ingaContainer = null
-            }
-        }
-
-        return if (ingaContainer == null) {
+        fun pullNewImage() {
             client
                 .pullImageCmd(INGA_IMAGE_NAME)
                 .withTag(INGA_IMAGE_TAG)
@@ -171,6 +154,45 @@ class IngaService(
                         super.onNext(item)
                     }
                 }).awaitCompletion()
+        }
+
+        if (ingaContainer == null) {
+            try {
+                pullNewImage()
+            } catch (e: DockerException) {
+                throw IllegalStateException("image pull failed ", e)
+            }
+        } else {
+            if (ingaContainer.state == "running") {
+                stopContainer(ingaContainerName)
+            }
+
+            fun hasNewImage(container: Container) =
+                container.image == "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
+
+            fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
+                try {
+                    pullNewImage()
+                } catch (e: DockerException) {
+                    Log.warn("INGA failed to pull new image", e)
+                    return oldContainer
+                }
+
+                client.removeContainerCmd(oldContainer.id).exec()
+                if (!hasNewImage(oldContainer)) {
+                    removeImageIfUnused(oldContainer.image)
+                }
+                return null
+            }
+
+            if (!hasNewImage(ingaContainer)
+                || state.ingaContainerParameters != state.ingaUserParameters
+            ) {
+                ingaContainer = pullAndRemoveIfNewImagePulled(ingaContainer)
+            }
+        }
+
+        return if (ingaContainer == null) {
             createIngaContainer(state)
         } else {
             ingaContainer.id
@@ -227,60 +249,86 @@ class IngaService(
     }
 
     private fun startIngaUiContainer(): String {
-        val ingaUiContainer = client
+        var ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
             .exec()
             .find(isTargetContainer(ingaUiContainerName))
 
-        if (ingaUiContainer != null) {
+        fun pullNewImage() {
+            client
+                .pullImageCmd(INGA_UI_IMAGE_NAME)
+                .withTag(INGA_UI_IMAGE_TAG)
+                .exec(object : PullImageResultCallback() {
+                    override fun onNext(item: PullResponseItem?) {
+                        Log.info("INGA-UI ${item?.status}")
+                        super.onNext(item)
+                    }
+                }).awaitCompletion()
+        }
+
+        if (ingaUiContainer == null) {
+            try {
+                pullNewImage()
+            } catch (e: DockerException) {
+                throw IllegalStateException("image pull failed ", e)
+            }
+        } else {
             if (ingaUiContainer.state == "running") {
                 stopContainer(ingaUiContainerName)
             }
 
-            client.removeContainerCmd(ingaUiContainer.id).exec()
+            fun hasNewImage(container: Container) =
+                container.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
 
-            if (ingaUiContainer.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG") {
-                removeImageIfUnused(ingaUiContainer.image)
+            fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
+                try {
+                    pullNewImage()
+                } catch (e: DockerException) {
+                    Log.warn("INGA-UI failed to pull new image", e)
+                    return oldContainer
+                }
+
+                client.removeContainerCmd(oldContainer.id).exec()
+                if (!hasNewImage(oldContainer)) {
+                    removeImageIfUnused(oldContainer.image)
+                }
+                return null
+            }
+
+            if (!hasNewImage(ingaUiContainer)) {
+                ingaUiContainer = pullAndRemoveIfNewImagePulled(ingaUiContainer)
             }
         }
 
-        client
-            .pullImageCmd(INGA_UI_IMAGE_NAME)
-            .withTag(INGA_UI_IMAGE_TAG)
-            .exec(object : PullImageResultCallback() {
-                override fun onNext(item: PullResponseItem?) {
-                    Log.info("INGA-UI ${item?.status}")
-                    super.onNext(item)
-                }
-            }).awaitCompletion()
+        return if (ingaUiContainer == null) {
+            val unusedPort = ServerSocket(0).use {
+                it.localPort
+            }
+            project.service<IngaSettings>().serverPort = unusedPort
+            val exposedPort = ExposedPort(unusedPort)
 
-        val unusedPort = ServerSocket(0).use {
-            it.localPort
+            client
+                .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
+                .withName(ingaUiContainerName)
+                .withHostConfig(
+                    HostConfig.newHostConfig()
+                        .withBinds(
+                            Bind(ingaContainerName, Volume("/html/report"), AccessMode.ro)
+                        )
+                        .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
+                        // add to terminate httpd with sigterm
+                        .withInit(true)
+                )
+                .withExposedPorts(exposedPort)
+                .withCmd("$unusedPort")
+                .exec()
+                .id
+        } else {
+            ingaUiContainer.id
+        }.also {
+            client.startContainerCmd(it).exec()
         }
-        val exposedPort = ExposedPort(unusedPort)
-
-        val containerId = client
-            .createContainerCmd("$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG")
-            .withName(ingaUiContainerName)
-            .withHostConfig(
-                HostConfig.newHostConfig()
-                    .withBinds(
-                        Bind(ingaContainerName, Volume("/html/report"), AccessMode.ro)
-                    )
-                    .withPortBindings(PortBinding(Ports.Binding.bindPort(unusedPort), exposedPort))
-                    // add to terminate httpd with sigterm
-                    .withInit(true)
-            )
-            .withExposedPorts(exposedPort)
-            .withCmd("$unusedPort")
-            .exec()
-            .id
-
-        client.startContainerCmd(containerId).exec()
-
-        project.service<IngaSettings>().serverPort = unusedPort
-        return containerId
     }
 
     private fun stopContainer(containerName: String) {
