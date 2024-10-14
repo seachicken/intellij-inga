@@ -279,7 +279,7 @@ class IngaService(
             }
 
             fun hasNewImage(container: Container) =
-                container.image != "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
+                container.image == "$INGA_UI_IMAGE_NAME:$INGA_UI_IMAGE_TAG"
 
             fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
                 try {
