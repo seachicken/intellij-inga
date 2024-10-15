@@ -28,9 +28,16 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>Improvements</h2>
+        <ul>
+            <li>Show error if not compiled and cannot be analyzed</li>
+            <li>Run Inga offline</li>
+        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix node grouping on Impact Map</li>
+            <li>Fix an error when restarting the inga-ui container</li>
+            <li>Avoid infinite loop when field name is the same as class name</li>
+            <li>Exclude local functions in Kotlin analysis results</li>
         </ul>
   ]]></change-notes>
 
