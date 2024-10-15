@@ -325,6 +325,7 @@ class IngaService(
                 .exec()
                 .id
         } else {
+            project.service<IngaSettings>().serverPort = ingaUiContainer.command.split(" ").last().toIntOrNull()
             ingaUiContainer.id
         }.also {
             client.startContainerCmd(it).exec()
