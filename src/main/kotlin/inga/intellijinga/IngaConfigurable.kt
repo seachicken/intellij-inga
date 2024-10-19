@@ -30,6 +30,7 @@ class IngaConfigurable(private val project: Project) : Configurable {
         return panel {
             row("Base branch:") {
                 cell(baseBranchField).bindText(state.ingaUserParameters::baseBranch)
+                    .comment("By default, analysis is based on changed files.")
             }
             row("Include path pattern:") {
                 cell(includePathPatternField).bindText(state.ingaUserParameters::includePathPattern)
