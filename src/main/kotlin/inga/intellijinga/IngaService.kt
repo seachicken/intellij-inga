@@ -33,9 +33,9 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.24.2-java"
+        const val INGA_IMAGE_TAG = "0.24.3-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.7.5"
+        const val INGA_UI_IMAGE_TAG = "0.7.6"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -242,6 +242,7 @@ class IngaService(
             )
             .withWorkingDir("/work")
             .withCmd(command)
+//            .withEnv("INGA_DEBUG=1")
             .exec()
             .id.also {
                 state.ingaContainerParameters = state.ingaUserParameters
