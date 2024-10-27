@@ -27,8 +27,8 @@ intellij {
 }
 
 dependencies {
-    implementation("com.github.docker-java:docker-java-core:3.4.0")
-    implementation("com.github.docker-java:docker-java-transport-httpclient5:3.4.0")
+    implementation("com.github.docker-java:docker-java-core:${project.extra["dockerJavaVersion"]}")
+    implementation("com.github.docker-java:docker-java-transport-httpclient5:${project.extra["dockerJavaVersion"]}")
 }
 
 configurations {
