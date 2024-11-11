@@ -29,6 +29,12 @@ intellij {
 dependencies {
     implementation("com.github.docker-java:docker-java-core:${project.extra["dockerJavaVersion"]}")
     implementation("com.github.docker-java:docker-java-transport-httpclient5:${project.extra["dockerJavaVersion"]}")
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("org.java-websocket:Java-WebSocket:1.5.7")
+    testImplementation("org.assertj:assertj-core:3.26.3")
+    testImplementation(platform("org.junit:junit-bom:5.11.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 configurations {
@@ -45,6 +51,9 @@ tasks {
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
+    }
+    withType<Test> {
+        useJUnitPlatform()
     }
 
     buildSearchableOptions {

@@ -10,7 +10,9 @@ import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ModuleRootManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.ServerStatus
@@ -19,8 +21,10 @@ import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.java_websocket.WebSocket
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -33,14 +37,15 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.24.2-java"
+        const val INGA_IMAGE_TAG = "0.24.4-beta.32-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.7.5"
+        const val INGA_UI_IMAGE_TAG = "0.7.7-beta.11"
     }
 
     private val ingaContainerName = "inga_${project.name}"
     private val ingaUiContainerName = "inga-ui_${project.name}"
     private lateinit var client: DockerClient
+    private var webSocketServer: IngaWebSocketServer? = null
 
     fun start(): String {
         Log.info("INGA starting Inga analysis...")
@@ -56,6 +61,13 @@ class IngaService(
         return runBlocking {
             client.createVolumeCmd().withName(ingaContainerName).exec()
             cs.launch {
+                val unusedPort = ServerSocket(0).use {
+                    it.localPort
+                }
+                project.service<IngaSettings>().webSocketPort = unusedPort
+                webSocketServer = IngaWebSocketServer(unusedPort, project)
+                webSocketServer?.start()
+
                 startIngaUiContainer()
             }
             startIngaContainer(project.service<IngaSettings>().state)
@@ -70,6 +82,7 @@ class IngaService(
 
         runBlocking {
             cs.launch {
+                webSocketServer?.stop()
                 stopContainer(ingaUiContainerName)
             }
             stopContainer(ingaContainerName)

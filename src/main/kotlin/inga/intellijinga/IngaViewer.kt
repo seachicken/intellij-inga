@@ -41,12 +41,15 @@ class IngaViewer(
         window.component.add(browser.component)
 
         cs.launch {
-            var prevPort: Int? = null
+            var prevServerPort: Int? = null
+            var prevWebSocketPort: Int? = null
             while (isActive) {
-                val port = project.service<IngaSettings>().serverPort
-                if (port != prevPort) {
-                    prevPort = port
-                    browser.loadURL("http://localhost:$port/")
+                val serverPort = project.service<IngaSettings>().serverPort
+                val webSocketPort = project.service<IngaSettings>().webSocketPort
+                if (serverPort != prevServerPort || webSocketPort != prevWebSocketPort) {
+                    prevServerPort = serverPort
+                    prevWebSocketPort = webSocketPort
+                    browser.loadURL("http://localhost:$serverPort/?wsPort=${webSocketPort}")
                 }
                 delay(10.seconds)
             }
