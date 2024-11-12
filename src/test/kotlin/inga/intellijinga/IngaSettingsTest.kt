@@ -28,7 +28,7 @@ class IngaSettingsTest {
             config = IngaConfig(listOf(Server("a", emptyList())))
         }
         val addRequest = AddConnectionPathsRequest(
-            "a/A.kt",
+            "a/",
             listOf("c")
         )
         assertThat(settings.applyRequest(addRequest).config).isEqualTo(
@@ -42,7 +42,7 @@ class IngaSettingsTest {
             config = IngaConfig(listOf(Server("a", listOf(Client("b")))))
         }
         val addRequest = AddConnectionPathsRequest(
-            "a/A.kt",
+            "a/",
             listOf("c")
         )
         assertThat(settings.applyRequest(addRequest).config).isEqualTo(
@@ -56,7 +56,7 @@ class IngaSettingsTest {
             config = IngaConfig(listOf(Server("a", emptyList())))
         }
         val addRequest = AddConnectionPathsRequest(
-            "b/A.kt",
+            "b/",
             emptyList()
         )
         assertThat(settings.applyRequest(addRequest).config).isEqualTo(
@@ -75,7 +75,7 @@ class IngaSettingsTest {
             config = IngaConfig(listOf(Server("a", emptyList())))
         }
         val addRequest = AddConnectionPathsRequest(
-            "a/A.kt",
+            "a/",
             null
         )
         assertThat(settings.applyRequest(addRequest).config).isEqualTo(
