@@ -1,5 +1,6 @@
 package inga.intellijinga
 
+import com.google.gson.Gson
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileEvent
@@ -9,6 +10,9 @@ import com.intellij.openapi.vfs.impl.BulkVirtualFileListenerAdapter
 import com.intellij.util.messages.MessageBusConnection
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.IndexAwareLanguageClient
+import com.redhat.devtools.lsp4ij.commands.CommandExecutor
+import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
+import org.eclipse.lsp4j.Command
 import java.nio.file.Path
 
 class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), VirtualFileListener {
@@ -30,6 +34,31 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
                     gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
                 )
             )
+
+            val gson = Gson()
+            LSPCommandContext(Command("inga.getModulePaths", "inga.getModulePaths"), project).apply {
+                preferredLanguageServerId = "ingaLanguageServer";
+            }.also {
+                CommandExecutor
+                    .executeCommand(it)
+                    .response()
+                    ?.thenAccept { r ->
+                        project.service<IngaSettings>().modulePaths =
+                            gson.fromJson(gson.toJson(r), GetModulePathsResponse::class.java).modulePaths
+                                .filter { p ->  p.isNotEmpty() }
+                    }
+            }
+
+            LSPCommandContext(Command("inga.getConfig", "inga.getConfig"), project).apply {
+                preferredLanguageServerId = "ingaLanguageServer";
+            }.also {
+                CommandExecutor
+                    .executeCommand(it)
+                    .response()
+                    ?.thenAccept { r ->
+                        project.service<IngaSettings>().config = gson.fromJson(gson.toJson(r), IngaConfig::class.java)
+                    }
+            }
         }
     }
 
@@ -56,3 +85,5 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
         return process.inputReader().readText()
     }
 }
+
+data class GetModulePathsResponse(val modulePaths: List<String>)
