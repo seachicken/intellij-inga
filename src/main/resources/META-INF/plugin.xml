@@ -30,14 +30,7 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li>Show error if not compiled and cannot be analyzed</li>
-            <li>Run Inga offline</li>
-        </ul>
-        <h2>Bug Fixes</h2>
-        <ul>
-            <li>Fix an error when restarting the inga-ui container</li>
-            <li>Avoid infinite loop when field name is the same as class name</li>
-            <li>Exclude local functions in Kotlin analysis results</li>
+            <li><a href="https://www.patreon.com/posts/speed-up-by-115913458?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link">Speed up searches by setting caller hints</a></li>
         </ul>
   ]]></change-notes>
 
