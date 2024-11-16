@@ -30,7 +30,12 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li><a href="https://www.patreon.com/posts/speed-up-by-115913458?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link">Speed up searches by setting caller hints</a></li>
+            <li>Click on the definition name to jump file</li>
+            <li>Show indexing progress</li>
+        </ul>
+        <h2>Bug Fixes</h2>
+        <ul>
+            <li>Fix timeout on the language server startup</li>
         </ul>
   ]]></change-notes>
 
