@@ -2,8 +2,12 @@ package inga.intellijinga
 
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.google.gson.Gson
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.redhat.devtools.lsp4ij.commands.CommandExecutor
 import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
 import org.eclipse.lsp4j.Command
@@ -11,6 +15,8 @@ import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
 import java.net.InetSocketAddress
+import java.nio.file.Paths
+import kotlin.io.path.pathString
 
 class IngaWebSocketServer(
     port: Int,
@@ -58,6 +64,17 @@ class IngaWebSocketServer(
                         }
                 }
             }
+            "openFile" -> {
+                val openRequest = gson.fromJson(message, OpenFileRequest::class.java)
+                val file = LocalFileSystem.getInstance()
+                    .findFileByPath(Paths.get(project.basePath ?: "", openRequest.path).pathString)
+                if (file != null) {
+                    ApplicationManager.getApplication().invokeLater {
+                        OpenFileDescriptor(project, file, openRequest.line - 1, openRequest.offset - 1).navigate(true)
+                        FileEditorManager.getInstance(project).openFile(file, true)
+                    }
+                }
+            }
         }
     }
 
@@ -84,3 +101,9 @@ data class AddConnectionPathsRequest(
     val serverPath: String,
     val clientPaths: List<String>?
 ) : BaseMessage("addConnectionPaths")
+
+data class OpenFileRequest(
+    val path: String,
+    val line: Int,
+    val offset: Int
+) : BaseMessage("getConnectionPaths")
