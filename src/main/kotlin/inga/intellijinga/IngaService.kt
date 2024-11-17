@@ -10,9 +10,7 @@ import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ModuleRootManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.ServerStatus
@@ -21,10 +19,8 @@ import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
-import org.java_websocket.WebSocket
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -149,6 +145,19 @@ class IngaService(
         }
     }
 
+    fun pullNewIngaImage() {
+        client
+            .pullImageCmd(INGA_IMAGE_NAME)
+            .withTag(INGA_IMAGE_TAG)
+            .withPlatform("linux/amd64")
+            .exec(object : PullImageResultCallback() {
+                override fun onNext(item: PullResponseItem?) {
+                    Log.info("INGA ${item?.status}")
+                    super.onNext(item)
+                }
+            }).awaitCompletion()
+    }
+
     private fun startIngaContainer(state: IngaSettingsState): String {
         var ingaContainer = client
             .listContainersCmd()
@@ -156,22 +165,9 @@ class IngaService(
             .exec()
             .find(isTargetContainer(ingaContainerName))
 
-        fun pullNewImage() {
-            client
-                .pullImageCmd(INGA_IMAGE_NAME)
-                .withTag(INGA_IMAGE_TAG)
-                .withPlatform("linux/amd64")
-                .exec(object : PullImageResultCallback() {
-                    override fun onNext(item: PullResponseItem?) {
-                        Log.info("INGA ${item?.status}")
-                        super.onNext(item)
-                    }
-                }).awaitCompletion()
-        }
-
         if (ingaContainer == null) {
             try {
-                pullNewImage()
+                pullNewIngaImage()
             } catch (e: DockerException) {
                 throw IllegalStateException("image pull failed ", e)
             }
@@ -185,7 +181,7 @@ class IngaService(
 
             fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
                 try {
-                    pullNewImage()
+                    pullNewIngaImage()
                 } catch (e: DockerException) {
                     Log.warn("INGA failed to pull new image", e)
                     return oldContainer
@@ -254,11 +250,24 @@ class IngaService(
                     .withTmpFs(mapOf("/inga-temp" to "rw,noexec"))
             )
             .withWorkingDir("/work")
+//            .withEnv("INGA_DEBUG=1")
             .withCmd(command)
             .exec()
             .id.also {
                 state.ingaContainerParameters = state.ingaUserParameters
             }
+    }
+
+    fun pullNewIngaUiImage() {
+        client
+            .pullImageCmd(INGA_UI_IMAGE_NAME)
+            .withTag(INGA_UI_IMAGE_TAG)
+            .exec(object : PullImageResultCallback() {
+                override fun onNext(item: PullResponseItem?) {
+                    Log.info("INGA-UI ${item?.status}")
+                    super.onNext(item)
+                }
+            }).awaitCompletion()
     }
 
     private fun startIngaUiContainer(): String {
@@ -268,21 +277,9 @@ class IngaService(
             .exec()
             .find(isTargetContainer(ingaUiContainerName))
 
-        fun pullNewImage() {
-            client
-                .pullImageCmd(INGA_UI_IMAGE_NAME)
-                .withTag(INGA_UI_IMAGE_TAG)
-                .exec(object : PullImageResultCallback() {
-                    override fun onNext(item: PullResponseItem?) {
-                        Log.info("INGA-UI ${item?.status}")
-                        super.onNext(item)
-                    }
-                }).awaitCompletion()
-        }
-
         if (ingaUiContainer == null) {
             try {
-                pullNewImage()
+                pullNewIngaUiImage()
             } catch (e: DockerException) {
                 throw IllegalStateException("image pull failed ", e)
             }
@@ -296,7 +293,7 @@ class IngaService(
 
             fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
                 try {
-                    pullNewImage()
+                    pullNewIngaUiImage()
                 } catch (e: DockerException) {
                     Log.warn("INGA-UI failed to pull new image", e)
                     return oldContainer

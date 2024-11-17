@@ -60,6 +60,9 @@
                 instance="inga.intellijinga.IngaConfigurable"
                 displayName="Inga"
                 nonDefaultProject="true"/>
+        <backgroundPostStartupActivity
+                id="inga.intellijinga.IngaStartupActivity"
+                implementation="inga.intellijinga.IngaStartupActivity"/>
     </extensions>
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="ingaLanguageServer"
