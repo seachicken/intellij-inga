@@ -362,7 +362,12 @@ class IngaService(
             .exec()
             .filter { it.image.contains(imageName) }
         if (usedContainers.isEmpty()) {
-            client.removeImageCmd(imageName).exec()
+            client.listImagesCmd()
+                .exec()
+                .find { it.repoTags.contains(imageName) }
+                ?.let {
+                    client.removeImageCmd(imageName).exec()
+                }
         }
     }
 
