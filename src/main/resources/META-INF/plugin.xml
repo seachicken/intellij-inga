@@ -28,14 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
-        <ul>
-            <li>Click on the definition name to jump file</li>
-            <li>Show indexing progress</li>
-        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix timeout on the language server startup</li>
+            <li>Fix process hang</li>
         </ul>
   ]]></change-notes>
 
