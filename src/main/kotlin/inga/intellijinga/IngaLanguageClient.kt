@@ -17,6 +17,7 @@ import java.nio.file.Path
 
 class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), VirtualFileListener {
     private val connection: MessageBusConnection = project.messageBus.connect()
+    private var isServerStarted = false
 
     init {
         connection.subscribe(VirtualFileManager.VFS_CHANGES, BulkVirtualFileListenerAdapter(this))
@@ -29,6 +30,8 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
 
     override fun handleServerStatusChanged(serverStatus: ServerStatus?) {
         if (serverStatus == ServerStatus.started) {
+            isServerStarted = true
+
             (languageServer as? IngaLanguageServerApi)?.diffChanged(
                 DiffChanged(
                     gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
@@ -63,6 +66,10 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
     }
 
     override fun contentsChanged(event: VirtualFileEvent) {
+        if (!isServerStarted) {
+            return
+        }
+
         (languageServer as? IngaLanguageServerApi)?.diffChanged(
             DiffChanged(
                 gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch),
