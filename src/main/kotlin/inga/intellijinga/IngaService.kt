@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.command.PullImageResultCallback
 import com.github.dockerjava.api.exception.DockerException
+import com.github.dockerjava.api.exception.NotModifiedException
 import com.github.dockerjava.api.model.*
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientImpl
@@ -37,9 +38,9 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.25.2-java"
+        const val INGA_IMAGE_TAG = "0.25.4-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.9.0"
+        const val INGA_UI_IMAGE_TAG = "0.10.1"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -351,7 +352,11 @@ class IngaService(
             .exec()
             .find(isTargetContainer(containerName))
             ?.let {
-                client.stopContainerCmd(it.id).exec()
+                try {
+                    client.stopContainerCmd(it.id).exec()
+                } catch (e: NotModifiedException) {
+                    Log.info("INGA already requested to stop container", e)
+                }
             }
     }
 

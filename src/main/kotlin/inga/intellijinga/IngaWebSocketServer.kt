@@ -35,6 +35,17 @@ class IngaWebSocketServer(
 
         val gson = Gson()
         when (gson.fromJson(message, BaseMessage::class.java).method) {
+            "getCallerHints" -> {
+                conn?.send(
+                    gson.toJson(
+                        GetCallerHintsResponse(
+                            project.service<IngaSettings>().config?.servers?.associate { s ->
+                                s.path to s.clients
+                            } ?: emptyMap()
+                        )
+                    )
+                )
+            }
             "getConnectionPaths" -> {
                 val getRequest = gson.fromJson(message, GetConnectionPathsRequest::class.java)
                 conn?.send(
@@ -87,6 +98,10 @@ class IngaWebSocketServer(
 }
 
 open class BaseMessage(val method: String)
+
+data class GetCallerHintsResponse(
+    val callerHints: Map<String, List<Client>>
+) : BaseMessage("getCallerHints")
 
 data class GetConnectionPathsResponse(
     val modulePaths: List<String>,
