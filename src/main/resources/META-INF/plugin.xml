@@ -28,9 +28,13 @@
   ]]></description>
 
     <change-notes><![CDATA[
+        <h2>New Features</h2>
+        <ul>
+            <li>Copy of .inga.yml</li>
+        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix process hang</li>
+            <li>Fix crash when the project has a compile error</li>
         </ul>
   ]]></change-notes>
 
