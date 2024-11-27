@@ -28,13 +28,11 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>New Features</h2>
-        <ul>
-            <li>Copy of .inga.yml</li>
-        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix crash when the project has a compile error</li>
+            <li>Fix to display service graph</li>
+            <li>Fix a crash on startup</li>
+            <li>Add a reference to Kotlin class path</li>
         </ul>
   ]]></change-notes>
 
