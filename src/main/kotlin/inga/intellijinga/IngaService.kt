@@ -38,9 +38,10 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.25.5-java"
+        const val INGA_IMAGE_TAG = "0.26.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.10.1"
+        const val INGA_UI_IMAGE_TAG = "0.10.2"
+        const val INGA_VOLUME_NAME = "inga"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -60,6 +61,7 @@ class IngaService(
         }
 
         return runBlocking {
+            client.createVolumeCmd().withName(INGA_VOLUME_NAME).exec()
             client.createVolumeCmd().withName(ingaContainerName).exec()
             cs.launch {
                 val unusedPort = ServerSocket(0).use {
@@ -217,24 +219,27 @@ class IngaService(
 
     private fun createIngaContainer(state: IngaSettingsState): String {
         val command = mutableListOf(
-            "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-temp",
+            "--mode", "server", "--root-path", "'/work'", "--output-path", "'/inga-output'", "--temp-path", "'/inga-temp'",
         )
         if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
-            command += state.ingaUserParameters.includePathPattern
+            command += "'${state.ingaUserParameters.includePathPattern}'"
         }
         if (state.ingaUserParameters.excludePathPattern.isNotEmpty()) {
             command += "--exclude"
-            command += state.ingaUserParameters.excludePathPattern
+            command += "'${state.ingaUserParameters.excludePathPattern}'"
         }
 
         val binds = mutableListOf(
-            Bind(project.basePath, Volume("/work"), AccessMode.ro),
+            // A lock file needs to be written to /work/.gradle when checking dependencies.
+            // https://github.com/seachicken/jvm-dependency-loader/blob/1648be5b4c9e0a70e1fb4680895df2751aa16e9f/src/main/java/inga/jvmdependencyloader/buildtool/Gradle.java#L50
+            Bind(project.basePath, Volume("/work"), AccessMode.rw),
+            Bind(INGA_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
             Bind(ingaContainerName, Volume("/inga-output"), AccessMode.rw)
         )
         val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
         if (Files.exists(gradleHome)) {
-            binds.add(Bind(gradleHome.pathString, Volume("/root/.gradle"), AccessMode.ro))
+            binds.add(Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro))
         }
         val mavenHome = Paths.get(System.getProperty("user.home")).resolve(".m2")
         if (Files.exists(mavenHome)) {
@@ -254,8 +259,16 @@ class IngaService(
                     .withBinds(binds)
                     .withTmpFs(mapOf("/inga-temp" to "rw,noexec"))
             )
+            .withEnv("GRADLE_RO_DEP_CACHE=/inga-shared/.gradle/caches")
             .withWorkingDir("/work")
-            .withCmd(command)
+            .withEntrypoint(
+                "bash", "-c",
+                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
+                // Instead, refer to copied caches.
+                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
+                "mkdir -p \$GRADLE_RO_DEP_CACHE && rsync -ra --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ \$GRADLE_RO_DEP_CACHE/ && " +
+                        "inga " + command.joinToString(" ")
+            )
             .exec()
             .id.also {
                 state.ingaContainerParameters = state.ingaUserParameters
