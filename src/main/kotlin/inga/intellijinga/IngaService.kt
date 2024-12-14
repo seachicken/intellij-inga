@@ -2,7 +2,9 @@ package inga.intellijinga
 
 import com.esotericsoftware.kryo.kryo5.minlog.Log
 import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.async.ResultCallback.Adapter
 import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.command.WaitContainerResultCallback
 import com.github.dockerjava.api.exception.DockerException
 import com.github.dockerjava.api.exception.NotModifiedException
 import com.github.dockerjava.api.model.*
@@ -11,9 +13,10 @@ import com.github.dockerjava.core.DockerClientImpl
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.openapi.module.ModuleManager
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task.Backgroundable
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ModuleRootManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.ServerStatus
@@ -22,10 +25,8 @@ import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
-import org.java_websocket.WebSocket
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -38,10 +39,12 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.26.0-java"
+        const val INGA_IMAGE_TAG = "0.26.1-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
-        const val INGA_UI_IMAGE_TAG = "0.10.2"
-        const val INGA_VOLUME_NAME = "inga"
+        const val INGA_UI_IMAGE_TAG = "0.10.5"
+        const val INGA_SYNC_IMAGE_NAME = "ghcr.io/seachicken/inga-sync"
+        const val INGA_SYNC_IMAGE_TAG = "0.1.0"
+        const val INGA_SHARED_VOLUME_NAME = "inga"
     }
 
     private val ingaContainerName = "inga_${project.name}"
@@ -61,7 +64,7 @@ class IngaService(
         }
 
         return runBlocking {
-            client.createVolumeCmd().withName(INGA_VOLUME_NAME).exec()
+            client.createVolumeCmd().withName(INGA_SHARED_VOLUME_NAME).exec()
             client.createVolumeCmd().withName(ingaContainerName).exec()
             cs.launch {
                 val unusedPort = ServerSocket(0).use {
@@ -73,8 +76,72 @@ class IngaService(
 
                 startIngaUiContainer()
             }
+            syncToSharedVolume()
             startIngaContainer(project.service<IngaSettings>().state)
         }
+    }
+
+    private fun syncToSharedVolume() {
+        val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
+        if (!Files.exists(gradleHome)) {
+            return
+        }
+
+        var hasSynched = false
+        var detailMessage = ""
+        ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to container", false) {
+            override fun run(indicator: ProgressIndicator) {
+                indicator.text = "Copying gradle caches..."
+                while (!hasSynched) {
+                    indicator.text2 = detailMessage
+                    Thread.sleep(200)
+                }
+            }
+        })
+        client
+            .pullImageCmd(INGA_SYNC_IMAGE_NAME)
+            .withTag(INGA_SYNC_IMAGE_TAG)
+            .exec(PullImageResultCallback())
+            .awaitCompletion()
+
+        val binds = listOf(
+            Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
+            Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro)
+        )
+        client
+            .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
+            .withHostConfig(
+                HostConfig.newHostConfig()
+                    .withBinds(binds)
+                    .withAutoRemove(true)
+            )
+            .withCmd(
+                "sh", "-c",
+                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
+                // Instead, refer to copied caches.
+                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
+                "mkdir -p /inga-shared/.gradle/caches && rsync -rav --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
+            )
+            .exec()
+            .also {
+                client.startContainerCmd(it.id).exec()
+                client.logContainerCmd(it.id)
+                    .withStdOut(true)
+                    .withStdErr(true)
+                    .withFollowStream(true)
+                    .exec(object : Adapter<Frame>() {
+                        override fun onNext(item: Frame?) {
+                            super.onNext(item)
+                            item?.let {
+                                detailMessage = String(item.payload)
+                            }
+                        }
+                    })
+                client.waitContainerCmd(it.id)
+                    .exec(WaitContainerResultCallback())
+                    .awaitCompletion()
+            }
+        hasSynched = true
     }
 
     fun stop() {
@@ -160,16 +227,27 @@ class IngaService(
             .find(isTargetContainer(ingaContainerName))
 
         fun pullNewImage() {
+            var hasPulled = false
+            var detailMessage = ""
+            ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Pull inga image", false) {
+                override fun run(indicator: ProgressIndicator) {
+                    while (!hasPulled) {
+                        indicator.text2 = detailMessage
+                        Thread.sleep(200)
+                    }
+                }
+            })
             client
                 .pullImageCmd(INGA_IMAGE_NAME)
                 .withTag(INGA_IMAGE_TAG)
                 .withPlatform("linux/amd64")
                 .exec(object : PullImageResultCallback() {
                     override fun onNext(item: PullResponseItem?) {
-                        Log.info("INGA ${item?.status}")
                         super.onNext(item)
+                        item?.status?.let { detailMessage = it }
                     }
                 }).awaitCompletion()
+            hasPulled = true
         }
 
         if (ingaContainer == null) {
@@ -219,28 +297,24 @@ class IngaService(
 
     private fun createIngaContainer(state: IngaSettingsState): String {
         val command = mutableListOf(
-            "--mode", "server", "--root-path", "'/work'", "--output-path", "'/inga-output'", "--temp-path", "'/inga-temp'",
+            "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-temp",
         )
         if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
-            command += "'${state.ingaUserParameters.includePathPattern}'"
+            command += state.ingaUserParameters.includePathPattern
         }
         if (state.ingaUserParameters.excludePathPattern.isNotEmpty()) {
             command += "--exclude"
-            command += "'${state.ingaUserParameters.excludePathPattern}'"
+            command += state.ingaUserParameters.excludePathPattern
         }
 
         val binds = mutableListOf(
             // A lock file needs to be written to /work/.gradle when checking dependencies.
             // https://github.com/seachicken/jvm-dependency-loader/blob/1648be5b4c9e0a70e1fb4680895df2751aa16e9f/src/main/java/inga/jvmdependencyloader/buildtool/Gradle.java#L50
             Bind(project.basePath, Volume("/work"), AccessMode.rw),
-            Bind(INGA_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
+            Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.ro),
             Bind(ingaContainerName, Volume("/inga-output"), AccessMode.rw)
         )
-        val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
-        if (Files.exists(gradleHome)) {
-            binds.add(Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro))
-        }
         val mavenHome = Paths.get(System.getProperty("user.home")).resolve(".m2")
         if (Files.exists(mavenHome)) {
             binds.add(Bind(mavenHome.pathString, Volume("/root/.m2"), AccessMode.ro))
@@ -261,14 +335,7 @@ class IngaService(
             )
             .withEnv("GRADLE_RO_DEP_CACHE=/inga-shared/.gradle/caches")
             .withWorkingDir("/work")
-            .withEntrypoint(
-                "bash", "-c",
-                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
-                // Instead, refer to copied caches.
-                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
-                "mkdir -p \$GRADLE_RO_DEP_CACHE && rsync -ra --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ \$GRADLE_RO_DEP_CACHE/ && " +
-                        "inga " + command.joinToString(" ")
-            )
+            .withCmd(command)
             .exec()
             .id.also {
                 state.ingaContainerParameters = state.ingaUserParameters
@@ -286,12 +353,8 @@ class IngaService(
             client
                 .pullImageCmd(INGA_UI_IMAGE_NAME)
                 .withTag(INGA_UI_IMAGE_TAG)
-                .exec(object : PullImageResultCallback() {
-                    override fun onNext(item: PullResponseItem?) {
-                        Log.info("INGA-UI ${item?.status}")
-                        super.onNext(item)
-                    }
-                }).awaitCompletion()
+                .exec(PullImageResultCallback())
+                .awaitCompletion()
         }
 
         if (ingaUiContainer == null) {
