@@ -89,69 +89,6 @@ class IngaService(
         }
     }
 
-    private fun syncToSharedVolume() {
-        val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
-        if (!Files.exists(gradleHome)) {
-            return
-        }
-
-        var hasSynched = false
-        var detailMessage = ""
-        ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to container", false) {
-            override fun run(indicator: ProgressIndicator) {
-                indicator.text = "Copying gradle caches..."
-                while (!hasSynched) {
-                    indicator.text2 = detailMessage
-                    Thread.sleep(200)
-                }
-            }
-        })
-        client
-            .pullImageCmd(INGA_SYNC_IMAGE_NAME)
-            .withTag(INGA_SYNC_IMAGE_TAG)
-            .exec(PullImageResultCallback())
-            .awaitCompletion()
-
-        val binds = listOf(
-            Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
-            Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro)
-        )
-        client
-            .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
-            .withHostConfig(
-                HostConfig.newHostConfig()
-                    .withBinds(binds)
-                    .withAutoRemove(true)
-            )
-            .withCmd(
-                "sh", "-c",
-                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
-                // Instead, refer to copied caches.
-                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
-                "mkdir -p /inga-shared/.gradle/caches && rsync -rav --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
-            )
-            .exec()
-            .also {
-                client.startContainerCmd(it.id).exec()
-                client.logContainerCmd(it.id)
-                    .withStdOut(true)
-                    .withStdErr(true)
-                    .withFollowStream(true)
-                    .exec(object : Adapter<Frame>() {
-                        override fun onNext(item: Frame?) {
-                            super.onNext(item)
-                            item?.let {
-                                detailMessage = String(item.payload)
-                            }
-                        }
-                    })
-                client.waitContainerCmd(it.id)
-                    .exec(WaitContainerResultCallback())
-                    .awaitCompletion()
-            }
-        hasSynched = true
-    }
-
     fun stop() {
         Log.info("INGA stop Inga analysis")
         if (!::client.isInitialized) {
@@ -229,6 +166,69 @@ class IngaService(
                 })
             LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
         }
+    }
+
+    private fun syncToSharedVolume() {
+        val gradleHome = Paths.get(System.getProperty("user.home")).resolve(".gradle")
+        if (!Files.exists(gradleHome)) {
+            return
+        }
+
+        var hasSynched = false
+        var detailMessage = ""
+        ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to container", false) {
+            override fun run(indicator: ProgressIndicator) {
+                indicator.text = "Copying gradle caches..."
+                while (!hasSynched) {
+                    indicator.text2 = detailMessage
+                    Thread.sleep(200)
+                }
+            }
+        })
+        client
+            .pullImageCmd(INGA_SYNC_IMAGE_NAME)
+            .withTag(INGA_SYNC_IMAGE_TAG)
+            .exec(PullImageResultCallback())
+            .awaitCompletion()
+
+        val binds = listOf(
+            Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
+            Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro)
+        )
+        client
+            .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
+            .withHostConfig(
+                HostConfig.newHostConfig()
+                    .withBinds(binds)
+                    .withAutoRemove(true)
+            )
+            .withCmd(
+                "sh", "-c",
+                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
+                // Instead, refer to copied caches.
+                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
+                "mkdir -p /inga-shared/.gradle/caches && rsync -rav --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
+            )
+            .exec()
+            .also {
+                client.startContainerCmd(it.id).exec()
+                client.logContainerCmd(it.id)
+                    .withStdOut(true)
+                    .withStdErr(true)
+                    .withFollowStream(true)
+                    .exec(object : Adapter<Frame>() {
+                        override fun onNext(item: Frame?) {
+                            super.onNext(item)
+                            item?.let {
+                                detailMessage = String(item.payload)
+                            }
+                        }
+                    })
+                client.waitContainerCmd(it.id)
+                    .exec(WaitContainerResultCallback())
+                    .awaitCompletion()
+            }
+        hasSynched = true
     }
 
     private fun setUpIngaContainer(state: IngaSettingsState): String {
