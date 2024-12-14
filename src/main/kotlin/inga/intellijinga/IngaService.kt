@@ -22,9 +22,7 @@ import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
 import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import java.net.ServerSocket
@@ -66,7 +64,7 @@ class IngaService(
         return runBlocking {
             client.createVolumeCmd().withName(INGA_SHARED_VOLUME_NAME).exec()
             client.createVolumeCmd().withName(ingaContainerName).exec()
-            cs.launch {
+            val startIngaUi = cs.launch {
                 val unusedPort = ServerSocket(0).use {
                     it.localPort
                 }
@@ -74,10 +72,20 @@ class IngaService(
                 webSocketServer = IngaWebSocketServer(unusedPort, project)
                 webSocketServer?.start()
 
-                startIngaUiContainer()
+                setUpIngaUiContainer().also {
+                    client.startContainerCmd(it).exec()
+                }
             }
-            syncToSharedVolume()
-            startIngaContainer(project.service<IngaSettings>().state)
+            val syncVolume = cs.launch {
+                syncToSharedVolume()
+            }
+            val setUpInga = cs.async {
+                setUpIngaContainer(project.service<IngaSettings>().state)
+            }
+            joinAll(startIngaUi, syncVolume)
+            setUpInga.await().also {
+                client.startContainerCmd(it).exec()
+            }
         }
     }
 
@@ -151,11 +159,15 @@ class IngaService(
         }
 
         runBlocking {
-            cs.launch {
-                webSocketServer?.stop()
-                stopContainer(ingaUiContainerName)
-            }
-            stopContainer(ingaContainerName)
+            joinAll(
+                cs.launch {
+                    webSocketServer?.stop()
+                    stopContainer(ingaUiContainerName)
+                },
+                cs.launch {
+                    stopContainer(ingaContainerName)
+                }
+            )
         }
     }
 
@@ -219,7 +231,7 @@ class IngaService(
         }
     }
 
-    private fun startIngaContainer(state: IngaSettingsState): String {
+    private fun setUpIngaContainer(state: IngaSettingsState): String {
         var ingaContainer = client
             .listContainersCmd()
             .withShowAll(true)
@@ -290,8 +302,6 @@ class IngaService(
             createIngaContainer(state)
         } else {
             ingaContainer.id
-        }.also {
-            client.startContainerCmd(it).exec()
         }
     }
 
@@ -342,7 +352,7 @@ class IngaService(
             }
     }
 
-    private fun startIngaUiContainer(): String {
+    private fun setUpIngaUiContainer(): String {
         var ingaUiContainer = client
             .listContainersCmd()
             .withShowAll(true)
@@ -417,8 +427,6 @@ class IngaService(
         } else {
             project.service<IngaSettings>().serverPort = ingaUiContainer.command.split(" ").last().toIntOrNull()
             ingaUiContainer.id
-        }.also {
-            client.startContainerCmd(it).exec()
         }
     }
 
