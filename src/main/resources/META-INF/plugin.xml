@@ -31,10 +31,11 @@
         <h2>Improvements</h2>
         <ul>
             <li>Improve reference analysis</li>
+            <li>Show background tasks on an indicator</li>
         </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Fix to load Gradle dependencies</li>
+            <li>Fix for service graph definition display</li>
         </ul>
   ]]></change-notes>
 
