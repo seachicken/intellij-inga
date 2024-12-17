@@ -176,7 +176,7 @@ class IngaService(
 
         var hasSynched = false
         var detailMessage = ""
-        ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to container", false) {
+        ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to Docker volumes", false) {
             override fun run(indicator: ProgressIndicator) {
                 indicator.text = "Copying gradle caches..."
                 while (!hasSynched) {
