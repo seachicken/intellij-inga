@@ -28,6 +28,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Message
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.regex.Pattern
 import kotlin.io.path.pathString
 
 @Service(Service.Level.PROJECT)
@@ -176,11 +177,14 @@ class IngaService(
 
         var hasSynched = false
         var detailMessage = ""
+        var percentage = 0.0
+        val percentagePattern = Pattern.compile("(\\d+)%")
         ProgressManager.getInstance().run(object : Backgroundable(project, "Inga: Sync to Docker volumes", false) {
             override fun run(indicator: ProgressIndicator) {
                 indicator.text = "Copying gradle caches..."
                 while (!hasSynched) {
                     indicator.text2 = detailMessage
+                    indicator.fraction = percentage / 100
                     Thread.sleep(200)
                 }
             }
@@ -207,7 +211,9 @@ class IngaService(
                 // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
                 // Instead, refer to copied caches.
                 // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
-                "mkdir -p /inga-shared/.gradle/caches && rsync -rav --exclude='*.lock' --exclude='gc.properties' /root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
+                "mkdir -p /inga-shared/.gradle/caches && " +
+                        "rsync -rav --info=progress2 --no-inc-recursive --exclude='*.lock' --exclude='gc.properties' " +
+                        "/root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
             )
             .exec()
             .also {
@@ -221,6 +227,10 @@ class IngaService(
                             super.onNext(item)
                             item?.let {
                                 detailMessage = String(item.payload)
+                                val matcher = percentagePattern.matcher(detailMessage);
+                                if (matcher.find()) {
+                                    percentage = matcher.group(1).toDouble()
+                                }
                             }
                         }
                     })
