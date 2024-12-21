@@ -317,7 +317,7 @@ class IngaService(
 
     private fun createIngaContainer(state: IngaSettingsState): String {
         val command = mutableListOf(
-            "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-temp",
+            "--mode", "server", "--root-path", "/work", "--output-path", "/inga-output", "--temp-path", "/inga-output",
         )
         if (state.ingaUserParameters.includePathPattern.isNotEmpty()) {
             command += "--include"
@@ -351,7 +351,6 @@ class IngaService(
             .withHostConfig(
                 HostConfig.newHostConfig()
                     .withBinds(binds)
-                    .withTmpFs(mapOf("/inga-temp" to "rw,noexec"))
             )
             .withEnv("GRADLE_RO_DEP_CACHE=/inga-shared/.gradle/caches")
             .withWorkingDir("/work")
