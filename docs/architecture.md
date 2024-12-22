@@ -1,5 +1,7 @@
 # Architecture
 
+- Analyze your code only on your local machine (The plugin will download Docker images and dependencies for analysis. Other than that, you should not see any other outbound traffic.)
+
 ```mermaid
 block-beta
 columns 5
@@ -9,7 +11,8 @@ columns 5
     block
       columns 1
       Source[("Source Code")]
-      DockerVolume[("Docker Volume\nreport.json")]
+      DockerVolume_project[("Volume for project\nindexes\nreport.json")]
+      DockerVolume_shared[("Volume for shared\n.gradle/caches")]
     end
   end
   space
@@ -23,7 +26,8 @@ columns 5
   IDE -- "HTTP" --> inga_ui
   IDE -- "LSP" --> inga
   inga -- "bind mount" --> Source
-  inga_ui -- "read" --> DockerVolume
-  inga -- "write" --> DockerVolume
+  inga_ui --> DockerVolume_project
+  inga --> DockerVolume_project
+  inga --> DockerVolume_shared
   inga --> Source
 ```
