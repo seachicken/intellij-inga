@@ -59,7 +59,7 @@
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="ingaLanguageServer"
                 name="Inga"
-                factoryClass="inga.intellijinga.IngaLanguageServer">
+                factoryClass="inga.intellijinga.IngaLanguageServerFactory">
             <description><![CDATA[
                 <p>Visualize the entry points affected by your code changes.</p>
     ]]>

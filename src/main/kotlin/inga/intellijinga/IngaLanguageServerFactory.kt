@@ -10,7 +10,7 @@ import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
 
-class IngaLanguageServer : LanguageServerFactory {
+class IngaLanguageServerFactory : LanguageServerFactory {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
         return object : OSProcessStreamConnectionProvider() {
             override fun start() {
