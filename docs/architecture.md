@@ -11,8 +11,8 @@ columns 5
     block
       columns 1
       Source[("Source Code")]
-      DockerVolume_project[("Volume for project\nindexes\nreport.json")]
-      DockerVolume_shared[("Volume for shared\n.gradle/caches")]
+      DockerVolume_project[("Volume for project\n(e.g., indexes, report.json)")]
+      DockerVolume_shared[("Volume for shared\n(e.g., .gradle/caches)")]
     end
   end
   space
