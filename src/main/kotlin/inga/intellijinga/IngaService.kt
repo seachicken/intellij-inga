@@ -38,7 +38,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.27.1-java"
+        const val INGA_IMAGE_TAG = "0.28.0-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.10.6"
         const val INGA_SYNC_IMAGE_NAME = "ghcr.io/seachicken/inga-sync"
@@ -262,7 +262,6 @@ class IngaService(
             client
                 .pullImageCmd(INGA_IMAGE_NAME)
                 .withTag(INGA_IMAGE_TAG)
-                .withPlatform("linux/amd64")
                 .exec(object : PullImageResultCallback() {
                     override fun onNext(item: PullResponseItem?) {
                         super.onNext(item)
@@ -347,7 +346,6 @@ class IngaService(
             .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
             .withName(ingaContainerName)
             .withStdinOpen(true)
-            .withPlatform("linux/amd64")
             .withHostConfig(
                 HostConfig.newHostConfig()
                     .withBinds(binds)
