@@ -30,7 +30,8 @@
     <change-notes><![CDATA[
         <h2>Improvements</h2>
         <ul>
-            <li>Performance improvement</li>
+            <li>Supports arm platform</li>
+            <li>Supports multi-project Gradle projects</li>
         </ul>
   ]]></change-notes>
 
