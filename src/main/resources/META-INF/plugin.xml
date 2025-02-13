@@ -28,10 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
+        <h2>Bug Fixes</h2>
         <ul>
-            <li>Supports arm platform</li>
-            <li>Supports multi-project Gradle projects</li>
+            <li>Avoid UI freezes</li>
         </ul>
   ]]></change-notes>
 
