@@ -14,6 +14,7 @@ import com.redhat.devtools.lsp4ij.commands.CommandExecutor
 import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
 import org.eclipse.lsp4j.Command
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 
 class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), VirtualFileListener {
     private val connection: MessageBusConnection = project.messageBus.connect()
@@ -32,11 +33,10 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
         if (serverStatus == ServerStatus.started) {
             isServerStarted = true
 
-            (languageServer as? IngaLanguageServerApi)?.diffChanged(
-                DiffChanged(
-                    gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
-                )
-            )
+            gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
+                .thenAccept {
+                    (languageServer as? IngaLanguageServerApi)?.diffChanged(DiffChanged(it))
+                }
 
             val gson = Gson()
             LSPCommandContext(Command("inga.getModulePaths", "inga.getModulePaths"), project).apply {
@@ -70,26 +70,26 @@ class IngaLanguageClient(project: Project) : IndexAwareLanguageClient(project), 
             return
         }
 
-        (languageServer as? IngaLanguageServerApi)?.diffChanged(
-            DiffChanged(
-                gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch),
-                event.file.url
-            )
-        )
+        gitDiff(project.service<IngaSettings>().state.ingaUserParameters.baseBranch)
+            .thenAccept {
+                (languageServer as? IngaLanguageServerApi)?.diffChanged(DiffChanged(it, event.file.url))
+            }
     }
 
-    private fun gitDiff(baseBranch: String): String {
+    private fun gitDiff(baseBranch: String): CompletableFuture<String> {
         val commands = mutableListOf("git", "diff")
         if (baseBranch.isNotEmpty()) {
             commands.add(baseBranch)
         }
         commands += "--unified=0"
         commands += "--"
-        val process = ProcessBuilder(commands)
-            .directory(project.basePath?.let { Path.of(it).toFile() })
-            .start()
-        process.waitFor()
-        return process.inputReader().readText()
+        return CompletableFuture.supplyAsync {
+            val process = ProcessBuilder(commands)
+                .directory(project.basePath?.let { Path.of(it).toFile() })
+                .start()
+            process.waitFor()
+            process.inputReader().readText()
+        }
     }
 }
 
