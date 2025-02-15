@@ -21,7 +21,7 @@ intellij {
         listOf(
             // If you want to try the nightly build, the version is "{version}@nightly"
             // https://plugins.jetbrains.com/api/plugins/23257/updates?channel=nightly&size=1
-            "com.redhat.devtools.lsp4ij:0.7.0",
+            "com.redhat.devtools.lsp4ij:0.10.0",
         )
     )
 }
