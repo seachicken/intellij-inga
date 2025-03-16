@@ -74,7 +74,10 @@ class IngaService(
                 webSocketServer?.start()
 
                 setUpIngaUiContainer().also {
-                    client.startContainerCmd(it).exec()
+                    try {
+                        client.startContainerCmd(it).exec()
+                    } catch (ignore: NotModifiedException) {
+                    }
                 }
             }
             val syncVolume = cs.launch {
@@ -85,7 +88,10 @@ class IngaService(
             }
             joinAll(startIngaUi, syncVolume)
             setUpInga.await().also {
-                client.startContainerCmd(it).exec()
+                try {
+                    client.startContainerCmd(it).exec()
+                } catch (ignore: NotModifiedException) {
+                }
             }
         }
     }
@@ -189,56 +195,64 @@ class IngaService(
                 }
             }
         })
-        client
-            .pullImageCmd(INGA_SYNC_IMAGE_NAME)
-            .withTag(INGA_SYNC_IMAGE_TAG)
-            .exec(PullImageResultCallback())
-            .awaitCompletion()
+        try {
+            client
+                .pullImageCmd(INGA_SYNC_IMAGE_NAME)
+                .withTag(INGA_SYNC_IMAGE_TAG)
+                .exec(PullImageResultCallback())
+                .awaitCompletion()
 
-        val binds = listOf(
-            Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
-            Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro)
-        )
-        client
-            .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
-            .withHostConfig(
-                HostConfig.newHostConfig()
-                    .withBinds(binds)
-                    .withAutoRemove(true)
+            val binds = listOf(
+                Bind(INGA_SHARED_VOLUME_NAME, Volume("/inga-shared"), AccessMode.rw),
+                Bind(gradleHome.pathString, Volume("/root/.gradle-host"), AccessMode.ro)
             )
-            .withCmd(
-                "sh", "-c",
-                // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
-                // Instead, refer to copied caches.
-                // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
-                "mkdir -p /inga-shared/.gradle/caches && " +
-                        "rsync -rav --info=progress2 --no-inc-recursive --exclude='*.lock' --exclude='gc.properties' " +
-                        "/root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
-            )
-            .exec()
-            .also {
-                client.startContainerCmd(it.id).exec()
-                client.logContainerCmd(it.id)
-                    .withStdOut(true)
-                    .withStdErr(true)
-                    .withFollowStream(true)
-                    .exec(object : Adapter<Frame>() {
-                        override fun onNext(item: Frame?) {
-                            super.onNext(item)
-                            item?.let {
-                                detailMessage = String(item.payload)
-                                val matcher = percentagePattern.matcher(detailMessage);
-                                if (matcher.find()) {
-                                    percentage = matcher.group(1).toDouble()
+            client
+                .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
+                .withHostConfig(
+                    HostConfig.newHostConfig()
+                        .withBinds(binds)
+                        .withAutoRemove(true)
+                )
+                .withCmd(
+                    "sh", "-c",
+                    // Sharing the host's Gradle dependency cache directly with the container can cause conflicts and errors.
+                    // Instead, refer to copied caches.
+                    // https://docs.gradle.org/current/userguide/dependency_caching.html#sec:shared-readonly-cache
+                    "mkdir -p /inga-shared/.gradle/caches && " +
+                            "rsync -rav --info=progress2 --no-inc-recursive --exclude='*.lock' --exclude='gc.properties' " +
+                            "/root/.gradle-host/caches/ /inga-shared/.gradle/caches/"
+                )
+                .exec()
+                .also {
+                    try {
+                        client.startContainerCmd(it.id).exec()
+                    } catch (ignore: NotModifiedException) {
+                    }
+                    client.logContainerCmd(it.id)
+                        .withStdOut(true)
+                        .withStdErr(true)
+                        .withFollowStream(true)
+                        .exec(object : Adapter<Frame>() {
+                            override fun onNext(item: Frame?) {
+                                super.onNext(item)
+                                item?.let {
+                                    detailMessage = String(item.payload)
+                                    val matcher = percentagePattern.matcher(detailMessage);
+                                    if (matcher.find()) {
+                                        percentage = matcher.group(1).toDouble()
+                                    }
                                 }
                             }
-                        }
-                    })
-                client.waitContainerCmd(it.id)
-                    .exec(WaitContainerResultCallback())
-                    .awaitCompletion()
-            }
-        hasSynched = true
+                        })
+                    client.waitContainerCmd(it.id)
+                        .exec(WaitContainerResultCallback())
+                        .awaitCompletion()
+                }
+        } catch (e: DockerException) {
+            throw IllegalStateException("failed to sync gradle caches", e)
+        } finally {
+            hasSynched = true
+        }
     }
 
     private fun setUpIngaContainer(state: IngaSettingsState): String {
@@ -259,24 +273,25 @@ class IngaService(
                     }
                 }
             })
-            client
-                .pullImageCmd(INGA_IMAGE_NAME)
-                .withTag(INGA_IMAGE_TAG)
-                .exec(object : PullImageResultCallback() {
-                    override fun onNext(item: PullResponseItem?) {
-                        super.onNext(item)
-                        item?.status?.let { detailMessage = it }
-                    }
-                }).awaitCompletion()
-            hasPulled = true
+            try {
+                client
+                    .pullImageCmd(INGA_IMAGE_NAME)
+                    .withTag(INGA_IMAGE_TAG)
+                    .exec(object : PullImageResultCallback() {
+                        override fun onNext(item: PullResponseItem?) {
+                            super.onNext(item)
+                            item?.status?.let { detailMessage = it }
+                        }
+                    }).awaitCompletion()
+            } catch (e: DockerException) {
+                throw IllegalStateException("image pull failed", e)
+            } finally {
+                hasPulled = true
+            }
         }
 
         if (ingaContainer == null) {
-            try {
-                pullNewImage()
-            } catch (e: DockerException) {
-                throw IllegalStateException("image pull failed ", e)
-            }
+            pullNewImage()
         } else {
             if (ingaContainer.state == "running") {
                 stopContainer(ingaContainerName)
