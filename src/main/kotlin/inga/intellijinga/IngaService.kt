@@ -17,6 +17,8 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task.Backgroundable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.JavaSdkType
+import com.intellij.openapi.roots.ProjectRootManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.ServerStatus
@@ -38,21 +40,42 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.28.0-java"
+        const val INGA_IMAGE_TAG = "0.30.1-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.10.6"
         const val INGA_SYNC_IMAGE_NAME = "ghcr.io/seachicken/inga-sync"
         const val INGA_SYNC_IMAGE_TAG = "0.1.0"
         const val INGA_SHARED_VOLUME_NAME = "inga"
+        private const val DEFAULT_JAVA_VERSION = 21
+        private val JAVA_VERSION_PATTERN = Pattern.compile("(\\d+)")
+
+        fun getProjectJavaVersion(sdkVersion: String): Int {
+            val matcher = JAVA_VERSION_PATTERN.matcher(sdkVersion)
+            if (matcher.find()) {
+                val version = matcher.group(1).toInt()
+                return if (version == 1) 8 else version
+            }
+            return DEFAULT_JAVA_VERSION
+        }
     }
 
+    private lateinit var ingaImageTag: String
     private val ingaContainerName = "inga_${project.name}"
     private val ingaUiContainerName = "inga-ui_${project.name}"
+    private val ingaSyncContainerName = "inga-sync"
     private lateinit var client: DockerClient
     private var webSocketServer: IngaWebSocketServer? = null
 
     fun start(): String {
         Log.info("INGA starting Inga analysis...")
+
+        val sdk = ProjectRootManager.getInstance(project).projectSdk
+        ingaImageTag = if (sdk != null && sdk.sdkType is JavaSdkType) {
+            "${INGA_IMAGE_TAG}-${getProjectJavaVersion(sdk.versionString ?: "")}"
+        } else {
+            INGA_IMAGE_TAG
+        }
+
         if (!::client.isInitialized) {
             val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
                 .build()
@@ -76,7 +99,8 @@ class IngaService(
                 setUpIngaUiContainer().also {
                     try {
                         client.startContainerCmd(it).exec()
-                    } catch (ignore: NotModifiedException) {
+                    } catch (e: NotModifiedException) {
+                        Log.info("INGA-UI already requested to start container", e)
                     }
                 }
             }
@@ -90,7 +114,8 @@ class IngaService(
             setUpInga.await().also {
                 try {
                     client.startContainerCmd(it).exec()
-                } catch (ignore: NotModifiedException) {
+                } catch (e: NotModifiedException) {
+                    Log.info("INGA already requested to start container", e)
                 }
             }
         }
@@ -181,6 +206,16 @@ class IngaService(
             return
         }
 
+        val ingaSyncContainer = client
+            .listContainersCmd()
+            .withShowAll(true)
+            .exec()
+            .find(isTargetContainer(ingaSyncContainerName))
+        if (ingaSyncContainer != null) {
+            Log.info("INGA already started the sync container")
+            return
+        }
+
         var hasSynched = false
         var detailMessage = ""
         var percentage = 0.0
@@ -208,6 +243,7 @@ class IngaService(
             )
             client
                 .createContainerCmd("$INGA_SYNC_IMAGE_NAME:$INGA_SYNC_IMAGE_TAG")
+                .withName(ingaSyncContainerName)
                 .withHostConfig(
                     HostConfig.newHostConfig()
                         .withBinds(binds)
@@ -226,7 +262,8 @@ class IngaService(
                 .also {
                     try {
                         client.startContainerCmd(it.id).exec()
-                    } catch (ignore: NotModifiedException) {
+                    } catch (e: NotModifiedException) {
+                        Log.info("INGA already requested to start the sync container", e)
                     }
                     client.logContainerCmd(it.id)
                         .withStdOut(true)
@@ -276,7 +313,7 @@ class IngaService(
             try {
                 client
                     .pullImageCmd(INGA_IMAGE_NAME)
-                    .withTag(INGA_IMAGE_TAG)
+                    .withTag(ingaImageTag)
                     .exec(object : PullImageResultCallback() {
                         override fun onNext(item: PullResponseItem?) {
                             super.onNext(item)
@@ -298,7 +335,7 @@ class IngaService(
             }
 
             fun hasNewImage(container: Container) =
-                container.image == "$INGA_IMAGE_NAME:$INGA_IMAGE_TAG"
+                container.image == "$INGA_IMAGE_NAME:$ingaImageTag"
 
             fun pullAndRemoveIfNewImagePulled(oldContainer: Container): Container? {
                 try {
@@ -358,7 +395,7 @@ class IngaService(
         }
 
         return client
-            .createContainerCmd("$INGA_IMAGE_NAME:$INGA_IMAGE_TAG")
+            .createContainerCmd("$INGA_IMAGE_NAME:$ingaImageTag")
             .withName(ingaContainerName)
             .withStdinOpen(true)
             .withHostConfig(
