@@ -28,13 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Improvements</h2>
-        <ul>
-            <li>Improve analysis of Java projects with compiler API</li>
-        </ul>
         <h2>Bug Fixes</h2>
         <ul>
-            <li>Avoid multiple background tasks</li>
+            <li>Fix parse error in Java 8 projects</li>
         </ul>
   ]]></change-notes>
 

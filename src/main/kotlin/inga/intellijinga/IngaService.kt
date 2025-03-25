@@ -40,7 +40,7 @@ class IngaService(
 ) {
     companion object {
         const val INGA_IMAGE_NAME = "ghcr.io/seachicken/inga"
-        const val INGA_IMAGE_TAG = "0.30.1-java"
+        const val INGA_IMAGE_TAG = "0.30.2-java"
         const val INGA_UI_IMAGE_NAME = "ghcr.io/seachicken/inga-ui"
         const val INGA_UI_IMAGE_TAG = "0.10.6"
         const val INGA_SYNC_IMAGE_NAME = "ghcr.io/seachicken/inga-sync"
