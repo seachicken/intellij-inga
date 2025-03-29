@@ -3,6 +3,7 @@ package inga.intellijinga
 import com.google.gson.Gson
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.components.service
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFileEvent
 import com.intellij.openapi.vfs.VirtualFileListener
@@ -14,6 +15,7 @@ import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.commands.CommandExecutor
 import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
+import com.redhat.devtools.lsp4ij.installation.LanguageServerInstallerBase
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import org.eclipse.lsp4j.Command
@@ -24,11 +26,17 @@ import java.util.concurrent.CompletableFuture
 class IngaLanguageServerFactory : LanguageServerFactory {
     private lateinit var fileListener: VirtualFileListener
     private lateinit var messageBusConnection: MessageBusConnection
+    private var installer: LanguageServerInstallerBase? = null
 
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
         return object : OSProcessStreamConnectionProvider() {
             override fun start() {
-                val ingaContainerId = project.service<IngaService>().start()
+                val ingaContainerId = try {
+                    project.service<IngaService>().start()
+                } catch (e: IllegalStateException) {
+                    installer?.reset()
+                    throw e
+                }
                 commandLine = GeneralCommandLine("docker", "attach", ingaContainerId)
                 super.start()
 
@@ -84,6 +92,26 @@ class IngaLanguageServerFactory : LanguageServerFactory {
                             }
                     }
                 }
+            }
+        }.apply {
+            installer = object : LanguageServerInstallerBase() {
+                override fun checkServerInstalled(indicator: ProgressIndicator): Boolean {
+                    return project.service<IngaService>().isInstalled()
+                }
+
+                override fun canBeCancelled(): Boolean {
+                    return false
+                }
+
+                override fun install(indicator: ProgressIndicator) {
+                    project.service<IngaService>().install(object : IngaService.Callback {
+                        override fun installing(step: Int, total: Int) {
+                            progress("Installing Inga server...", step.toDouble() / total.toDouble(), indicator)
+                        }
+                    })
+                }
+            }.also {
+                setServerInstaller(it)
             }
         }
 

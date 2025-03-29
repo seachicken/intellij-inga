@@ -14,14 +14,14 @@ repositories {
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2023.2")
+    version.set("2023.3")
     type.set("IC") // Target IDE Platform
 
     plugins.set(
         listOf(
             // If you want to try the nightly build, the version is "{version}@nightly"
             // https://plugins.jetbrains.com/api/plugins/23257/updates?channel=nightly&size=1
-            "com.redhat.devtools.lsp4ij:0.10.0",
+            "com.redhat.devtools.lsp4ij:0.11.0",
         )
     )
 }
