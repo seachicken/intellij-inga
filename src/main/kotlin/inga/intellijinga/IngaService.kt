@@ -65,10 +65,15 @@ class IngaService(
     private val ingaSyncContainerName = "inga-sync"
     private lateinit var client: DockerClient
     private var webSocketServer: IngaWebSocketServer? = null
+    private var ingaContainerId: String? = null
+    private var ingaUiContainerId: String? = null
+    private var installStep = 0
+    private val installTotalStep = 3
 
-    fun start(): String {
-        Log.info("INGA starting Inga analysis...")
+    fun install(callback: Callback) {
+        Log.info("INGA installing Inga server...")
 
+        installStep = 0
         val sdk = ProjectRootManager.getInstance(project).projectSdk
         ingaImageTag = if (sdk != null && sdk.sdkType is JavaSdkType) {
             "${INGA_IMAGE_TAG}-${getProjectJavaVersion(sdk.versionString ?: "")}"
@@ -77,48 +82,73 @@ class IngaService(
         }
 
         if (!::client.isInitialized) {
-            val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-                .build()
-            val httpClient = ApacheDockerHttpClient.Builder()
-                .dockerHost(config.dockerHost)
-                .build()
-            client = DockerClientImpl.getInstance(config, httpClient)
+            client = createDockerClient()
         }
 
         return runBlocking {
             client.createVolumeCmd().withName(INGA_SHARED_VOLUME_NAME).exec()
             client.createVolumeCmd().withName(ingaContainerName).exec()
             val startIngaUi = cs.launch {
-                val unusedPort = ServerSocket(0).use {
-                    it.localPort
-                }
-                project.service<IngaSettings>().webSocketPort = unusedPort
-                webSocketServer = IngaWebSocketServer(unusedPort, project)
-                webSocketServer?.start()
-
-                setUpIngaUiContainer().also {
-                    try {
-                        client.startContainerCmd(it).exec()
-                    } catch (e: NotModifiedException) {
-                        Log.info("INGA-UI already requested to start container", e)
-                    }
+                ingaUiContainerId = setUpIngaUiContainer().also {
+                    callback.installing(++installStep, installTotalStep)
                 }
             }
             val syncVolume = cs.launch {
-                syncToSharedVolume()
-            }
-            val setUpInga = cs.async {
-                setUpIngaContainer(project.service<IngaSettings>().state)
-            }
-            joinAll(startIngaUi, syncVolume)
-            setUpInga.await().also {
-                try {
-                    client.startContainerCmd(it).exec()
-                } catch (e: NotModifiedException) {
-                    Log.info("INGA already requested to start container", e)
+                syncToSharedVolume().also {
+                    callback.installing(++installStep, installTotalStep)
                 }
             }
+            val setUpInga = cs.async {
+                setUpIngaContainer(project.service<IngaSettings>().state).also {
+                    callback.installing(++installStep, installTotalStep)
+                }
+            }
+            joinAll(startIngaUi, syncVolume)
+            ingaContainerId = setUpInga.await()
         }
+    }
+
+    fun isInstalled(): Boolean {
+        return ingaContainerId != null && ingaUiContainerId != null
+    }
+
+    fun start(): String {
+        Log.info("INGA starting Inga analysis...")
+
+        if (!::client.isInitialized) {
+            client = createDockerClient()
+        }
+
+        try {
+            ingaContainerId?.let {
+                client.startContainerCmd(it).exec()
+            }
+        } catch (e: NotModifiedException) {
+            Log.info("INGA already requested to start container")
+        }
+
+        val unusedPort = ServerSocket(0).use {
+            it.localPort
+        }
+        project.service<IngaSettings>().webSocketPort = unusedPort
+        webSocketServer = IngaWebSocketServer(unusedPort, project)
+        webSocketServer?.start()
+
+        try {
+            ingaUiContainerId?.let {
+                val ingaUiContainer = client
+                    .listContainersCmd()
+                    .withShowAll(true)
+                    .exec()
+                    .find { c -> c.id == it }
+                project.service<IngaSettings>().serverPort = ingaUiContainer?.command?.split(" ")?.last()?.toIntOrNull()
+                client.startContainerCmd(it).exec()
+            }
+        } catch (e: NotModifiedException) {
+            Log.info("INGA-UI already requested to start container")
+        }
+
+        return ingaContainerId ?: throw IllegalStateException("Inga server is not installed")
     }
 
     fun stop() {
@@ -140,6 +170,15 @@ class IngaService(
         }
     }
 
+    private fun createDockerClient(): DockerClient {
+        val config = DefaultDockerClientConfig.createDefaultConfigBuilder()
+            .build()
+        val httpClient = ApacheDockerHttpClient.Builder()
+            .dockerHost(config.dockerHost)
+            .build()
+        return DockerClientImpl.getInstance(config, httpClient)
+    }
+
     fun clearCachesAndRestart() {
         fun clearCachesAndStart() {
             client
@@ -149,6 +188,7 @@ class IngaService(
                 .find(isTargetContainer(ingaContainerName))
                 ?.let {
                     client.removeContainerCmd(it.id).exec()
+                    ingaContainerId = null
                     removeImageIfUnused(it.image)
                 }
             client
@@ -158,6 +198,7 @@ class IngaService(
                 .find(isTargetContainer(ingaUiContainerName))
                 ?.let {
                     client.removeContainerCmd(it.id).exec()
+                    ingaUiContainerId = null
                     removeImageIfUnused(it.image)
                 }
             client.removeVolumeCmd(ingaContainerName).exec()
@@ -171,7 +212,7 @@ class IngaService(
                 .addLanguageServerLifecycleListener(object : LanguageServerLifecycleListener {
                     private var started = false
                     private var retryCount = 0
-                    private var maxCount = 3
+                    private val maxCount = 3
                     override fun handleStatusChanged(server: LanguageServerWrapper?) {
                         if (!started && server?.serverStatus == ServerStatus.stopped) {
                             started = true
@@ -263,7 +304,7 @@ class IngaService(
                     try {
                         client.startContainerCmd(it.id).exec()
                     } catch (e: NotModifiedException) {
-                        Log.info("INGA already requested to start the sync container", e)
+                        Log.info("INGA already requested to start the sync container")
                     }
                     client.logContainerCmd(it.id)
                         .withStdOut(true)
@@ -464,7 +505,6 @@ class IngaService(
             val unusedPort = ServerSocket(0).use {
                 it.localPort
             }
-            project.service<IngaSettings>().serverPort = unusedPort
             val exposedPort = ExposedPort(unusedPort)
 
             client
@@ -484,7 +524,6 @@ class IngaService(
                 .exec()
                 .id
         } else {
-            project.service<IngaSettings>().serverPort = ingaUiContainer.command.split(" ").last().toIntOrNull()
             ingaUiContainer.id
         }
     }
@@ -498,7 +537,7 @@ class IngaService(
                 try {
                     client.stopContainerCmd(it.id).exec()
                 } catch (e: NotModifiedException) {
-                    Log.info("INGA already requested to stop container", e)
+                    Log.info("INGA already requested to stop container")
                 }
             }
     }
@@ -521,4 +560,8 @@ class IngaService(
 
     private fun isTargetContainer(name: String): (Container) -> Boolean =
         { it.names[0].substringAfter("/") == name }
+
+    interface Callback {
+        fun installing(step: Int, total: Int)
+    }
 }
