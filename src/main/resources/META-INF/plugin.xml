@@ -28,9 +28,9 @@
   ]]></description>
 
     <change-notes><![CDATA[
-        <h2>Bug Fixes</h2>
+        <h2>Improvements</h2>
         <ul>
-            <li>Fix parse error in Java 8 projects</li>
+            <li>Separating the installation process to reduce initialization time</li>
         </ul>
   ]]></change-notes>
 
