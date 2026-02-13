@@ -18,7 +18,7 @@ import kotlin.time.Duration.Companion.seconds
 class IngaViewer(
     private val cs: CoroutineScope
 ) : ToolWindowFactory {
-    override fun createToolWindowContent(project: Project, window: ToolWindow) {
+    override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         if (!JBCefApp.isSupported()) {
             return
         }
@@ -38,7 +38,7 @@ class IngaViewer(
                     }
                 }, cefBrowser)
             }
-        window.component.add(browser.component)
+        toolWindow.component.add(browser.component)
 
         cs.launch {
             var prevServerPort: Int? = null

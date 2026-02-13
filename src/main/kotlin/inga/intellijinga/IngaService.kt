@@ -124,7 +124,7 @@ class IngaService(
                 client.startContainerCmd(it).exec()
             }
         } catch (e: NotModifiedException) {
-            Log.info("INGA already requested to start container")
+            Log.info("INGA already requested to start container", e)
         }
 
         val unusedPort = ServerSocket(0).use {
@@ -145,7 +145,7 @@ class IngaService(
                 client.startContainerCmd(it).exec()
             }
         } catch (e: NotModifiedException) {
-            Log.info("INGA-UI already requested to start container")
+            Log.info("INGA-UI already requested to start container", e)
         }
 
         return ingaContainerId ?: throw IllegalStateException("Inga server is not installed")
@@ -213,18 +213,18 @@ class IngaService(
                     private var started = false
                     private var retryCount = 0
                     private val maxCount = 3
-                    override fun handleStatusChanged(server: LanguageServerWrapper?) {
-                        if (!started && server?.serverStatus == ServerStatus.stopped) {
+                    override fun handleStatusChanged(server: LanguageServerWrapper) {
+                        if (!started && server.serverStatus == ServerStatus.stopped) {
                             started = true
                             clearCachesAndStart()
                             LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
                         }
                     }
 
-                    override fun handleLSPMessage(message: Message?, consumer: MessageConsumer?, server: LanguageServerWrapper?) {
+                    override fun handleLSPMessage(message: Message, consumer: MessageConsumer, server: LanguageServerWrapper) {
                     }
 
-                    override fun handleError(server: LanguageServerWrapper?, e: Throwable?) {
+                    override fun handleError(server: LanguageServerWrapper, e: Throwable) {
                         retryCount++
                         Log.warn("INGA restart failed. retry: ${retryCount}/${maxCount}", e)
                         if (retryCount <= maxCount) {
@@ -304,7 +304,7 @@ class IngaService(
                     try {
                         client.startContainerCmd(it.id).exec()
                     } catch (e: NotModifiedException) {
-                        Log.info("INGA already requested to start the sync container")
+                        Log.info("INGA already requested to start the sync container", e)
                     }
                     client.logContainerCmd(it.id)
                         .withStdOut(true)
@@ -315,7 +315,7 @@ class IngaService(
                                 super.onNext(item)
                                 item?.let {
                                     detailMessage = String(item.payload)
-                                    val matcher = percentagePattern.matcher(detailMessage);
+                                    val matcher = percentagePattern.matcher(detailMessage)
                                     if (matcher.find()) {
                                         percentage = matcher.group(1).toDouble()
                                     }
@@ -537,7 +537,7 @@ class IngaService(
                 try {
                     client.stopContainerCmd(it.id).exec()
                 } catch (e: NotModifiedException) {
-                    Log.info("INGA already requested to stop container")
+                    Log.info("INGA already requested to stop container", e)
                 }
             }
     }

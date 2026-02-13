@@ -96,7 +96,7 @@ class IngaLanguageServerFactory : LanguageServerFactory {
         }.apply {
             installer = object : LanguageServerInstallerBase() {
                 override fun checkServerInstalled(indicator: ProgressIndicator): Boolean {
-                    return project.service<IngaService>().isInstalled()
+                    return project?.service<IngaService>()?.isInstalled() ?: false
                 }
 
                 override fun canBeCancelled(): Boolean {
@@ -104,7 +104,7 @@ class IngaLanguageServerFactory : LanguageServerFactory {
                 }
 
                 override fun install(indicator: ProgressIndicator) {
-                    project.service<IngaService>().install(object : IngaService.Callback {
+                    project?.service<IngaService>()?.install(object : IngaService.Callback {
                         override fun installing(step: Int, total: Int) {
                             progress("Installing Inga server...", step.toDouble() / total.toDouble(), indicator)
                         }
