@@ -50,8 +50,11 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("org.java-websocket:Java-WebSocket:1.5.7")
     testImplementation(libs.junit)
-    testImplementation(libs.opentest4j)
+    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.junit.jupiter.params)
     testImplementation("org.assertj:assertj-core:3.26.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
@@ -126,6 +129,10 @@ configurations {
 tasks {
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
+    }
+
+    test {
+        useJUnitPlatform()
     }
 
     publishPlugin {
