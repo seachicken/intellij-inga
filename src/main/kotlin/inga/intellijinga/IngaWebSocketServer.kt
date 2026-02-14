@@ -8,9 +8,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
-import com.redhat.devtools.lsp4ij.commands.CommandExecutor
-import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
-import org.eclipse.lsp4j.Command
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
@@ -58,22 +56,18 @@ class IngaWebSocketServer(
                 )
             }
             "addConnectionPaths" -> {
-                val addRequest = gson.fromJson(message, AddConnectionPathsRequest::class.java)
-                val command = Command(
-                    "inga.updateConfig", "inga.updateConfig", listOf(
-                        project.service<IngaSettings>().applyRequest(addRequest).config
-                    )
-                )
-                LSPCommandContext(command, project).apply {
-                    preferredLanguageServerId = "ingaLanguageServer";
-                }.also {
-                    CommandExecutor
-                        .executeCommand(it)
-                        .response()
-                        ?.thenAccept { r ->
-                            project.service<IngaSettings>().config = gson.fromJson(gson.toJson(r), IngaConfig::class.java)
-                        }
-                }
+                LanguageServerManager.getInstance(project)
+                    .getLanguageServer("ingaLanguageServer")
+                    .thenApply { it?.server }
+                    .thenCompose {
+                        val addRequest = gson.fromJson(message, AddConnectionPathsRequest::class.java)
+                        (it as IngaLanguageServerApi).updateConfig(
+                            project.service<IngaSettings>().applyRequest(addRequest).config
+                        )
+                    }
+                    .thenAccept { r ->
+                        project.service<IngaSettings>().config = gson.fromJson(gson.toJson(r), IngaConfig::class.java)
+                    }
             }
             "openFile" -> {
                 val openRequest = gson.fromJson(message, OpenFileRequest::class.java)

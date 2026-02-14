@@ -11,14 +11,12 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.impl.BulkVirtualFileListenerAdapter
 import com.intellij.util.messages.MessageBusConnection
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
-import com.redhat.devtools.lsp4ij.commands.CommandExecutor
-import com.redhat.devtools.lsp4ij.commands.LSPCommandContext
 import com.redhat.devtools.lsp4ij.installation.LanguageServerInstallerBase
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
-import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.services.LanguageServer
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -68,29 +66,27 @@ class IngaLanguageServerFactory : LanguageServerFactory {
                     }
 
                     val gson = Gson()
-                    LSPCommandContext(Command("inga.getModulePaths", "inga.getModulePaths"), project).apply {
-                        preferredLanguageServerId = "ingaLanguageServer";
-                    }.also {
-                        CommandExecutor
-                            .executeCommand(it)
-                            .response()
-                            ?.thenAccept { r ->
-                                project.service<IngaSettings>().modulePaths =
-                                    gson.fromJson(gson.toJson(r), GetModulePathsResponse::class.java).modulePaths
-                                        .filter { p ->  p.isNotEmpty() }
-                            }
-                    }
+                    LanguageServerManager.getInstance(project)
+                        .getLanguageServer("ingaLanguageServer")
+                        .thenApply { it?.server }
+                        .thenCompose {
+                            (it as IngaLanguageServerApi).getModulePaths()
+                        }
+                        .thenAccept { r ->
+                            project.service<IngaSettings>().modulePaths =
+                                gson.fromJson(gson.toJson(r), GetModulePathsResponse::class.java).modulePaths
+                                    .filter { p ->  p.isNotEmpty() }
+                        }
 
-                    LSPCommandContext(Command("inga.getConfig", "inga.getConfig"), project).apply {
-                        preferredLanguageServerId = "ingaLanguageServer";
-                    }.also {
-                        CommandExecutor
-                            .executeCommand(it)
-                            .response()
-                            ?.thenAccept { r ->
-                                project.service<IngaSettings>().config = gson.fromJson(gson.toJson(r), IngaConfig::class.java)
-                            }
-                    }
+                    LanguageServerManager.getInstance(project)
+                        .getLanguageServer("ingaLanguageServer")
+                        .thenApply { it?.server }
+                        .thenCompose {
+                            (it as IngaLanguageServerApi).getConfig()
+                        }
+                        .thenAccept { r ->
+                            project.service<IngaSettings>().config = gson.fromJson(gson.toJson(r), IngaConfig::class.java)
+                        }
                 }
             }
         }.apply {
@@ -148,6 +144,4 @@ class IngaLanguageServerFactory : LanguageServerFactory {
             process.inputReader().readText()
         }
     }
-
-    data class GetModulePathsResponse(val modulePaths: List<String>)
 }
