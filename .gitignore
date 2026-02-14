@@ -10,6 +10,9 @@ build/
 .idea/compiler.xml
 .idea/gradle.xml
 .idea/libraries/
+.intellijPlatform
+.kotlin
+.qodana
 *.iws
 *.iml
 *.ipr
