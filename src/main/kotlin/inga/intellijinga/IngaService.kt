@@ -20,13 +20,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.JavaSdkType
 import com.intellij.openapi.roots.ProjectRootManager
 import com.redhat.devtools.lsp4ij.LanguageServerManager
-import com.redhat.devtools.lsp4ij.LanguageServerWrapper
-import com.redhat.devtools.lsp4ij.ServerStatus
-import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
-import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import kotlinx.coroutines.*
-import org.eclipse.lsp4j.jsonrpc.MessageConsumer
-import org.eclipse.lsp4j.jsonrpc.messages.Message
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -179,66 +173,36 @@ class IngaService(
         return DockerClientImpl.getInstance(config, httpClient)
     }
 
-    fun clearCachesAndRestart() {
-        fun clearCachesAndStart() {
-            client
-                .listContainersCmd()
-                .withShowAll(true)
-                .exec()
-                .find(isTargetContainer(ingaContainerName))
-                ?.let {
-                    client.removeContainerCmd(it.id).exec()
-                    ingaContainerId = null
-                    removeImageIfUnused(it.image)
-                }
-            client
-                .listContainersCmd()
-                .withShowAll(true)
-                .exec()
-                .find(isTargetContainer(ingaUiContainerName))
-                ?.let {
-                    client.removeContainerCmd(it.id).exec()
-                    ingaUiContainerId = null
-                    removeImageIfUnused(it.image)
-                }
-            client.removeVolumeCmd(ingaContainerName).exec()
-            LanguageServerManager.getInstance(project).start("ingaLanguageServer")
-        }
+    fun clearCaches() {
+        // Stopping before starting will result in an error, so block processing until Language Server is started.
+        LanguageServerManager.getInstance(project).getLanguageServer("ingaLanguageServer").get()
 
-        if (LanguageServerManager.getInstance(project).getServerStatus("ingaLanguageServer") == ServerStatus.stopped) {
-            clearCachesAndStart()
-        } else {
-            LanguageServerLifecycleManager.getInstance(project)
-                .addLanguageServerLifecycleListener(object : LanguageServerLifecycleListener {
-                    private var started = false
-                    private var retryCount = 0
-                    private val maxCount = 3
-                    override fun handleStatusChanged(server: LanguageServerWrapper) {
-                        if (!started && server.serverStatus == ServerStatus.stopped) {
-                            started = true
-                            clearCachesAndStart()
-                            LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
-                        }
-                    }
+        LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
 
-                    override fun handleLSPMessage(message: Message, consumer: MessageConsumer, server: LanguageServerWrapper) {
-                    }
+        // To clean up Docker, block processing until Language Server is stopped.
+        LanguageServerManager.getInstance(project).getLanguageServer("ingaLanguageServer").get()
 
-                    override fun handleError(server: LanguageServerWrapper, e: Throwable) {
-                        retryCount++
-                        Log.warn("INGA restart failed. retry: ${retryCount}/${maxCount}", e)
-                        if (retryCount <= maxCount) {
-                            LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
-                            return
-                        }
-                        LanguageServerLifecycleManager.getInstance(project).removeLanguageServerLifecycleListener(this)
-                    }
-
-                    override fun dispose() {
-                    }
-                })
-            LanguageServerManager.getInstance(project).stop("ingaLanguageServer")
-        }
+        client
+            .listContainersCmd()
+            .withShowAll(true)
+            .exec()
+            .find(isTargetContainer(ingaContainerName))
+            ?.let {
+                client.removeContainerCmd(it.id).exec()
+                ingaContainerId = null
+                removeImageIfUnused(it.image)
+            }
+        client
+            .listContainersCmd()
+            .withShowAll(true)
+            .exec()
+            .find(isTargetContainer(ingaUiContainerName))
+            ?.let {
+                client.removeContainerCmd(it.id).exec()
+                ingaUiContainerId = null
+                removeImageIfUnused(it.image)
+            }
+        client.removeVolumeCmd(ingaContainerName).exec()
     }
 
     private fun syncToSharedVolume() {
