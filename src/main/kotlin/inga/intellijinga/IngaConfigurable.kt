@@ -45,8 +45,8 @@ class IngaConfigurable(private val project: Project) : Configurable {
                 }
             }
             row {
-                button("Clear Caches and Restart") {
-                    project.service<IngaService>().clearCachesAndRestart()
+                button("Clear Caches") {
+                    project.service<IngaService>().clearCaches()
                 }
             }
         }
